@@ -1,0 +1,313 @@
+from __future__ import annotations
+
+from langgraph.graph import END, StateGraph
+
+from app.state.workflow_state import WorkflowState
+from app.tools.documents.pdf_parser import PDFParser
+from app.tools.documents.retriever import DocumentRetriever
+from app.tools.vision.image_analyzer import VisionAnalyzer
+from app.workflow.nodes.complexity_gate import ComplexityGate
+from app.workflow.nodes.data_node import DataNode
+from app.workflow.nodes.deliverable import DeliverableNode
+from app.workflow.nodes.document_node import DocumentNode
+from app.workflow.nodes.input_processor import detect_input_modalities
+from app.workflow.nodes.policy_router import PolicyRouter
+from app.workflow.nodes.reasoning_node import ReasoningNode
+from app.workflow.nodes.repair import RepairNode
+from app.workflow.nodes.synthesis import SynthesisNode
+from app.workflow.nodes.task_analyzer import TaskAnalyzer
+from app.workflow.nodes.vision_node import VisionNode
+from app.workflow.nodes.verifier import Verifier
+
+
+class WorkflowGraph:
+    def __init__(self):
+        self.graph = StateGraph(WorkflowState)
+        self.max_repair_attempts = 3
+
+    def _input_processor(self, state: WorkflowState) -> WorkflowState:
+        if state.user_query:
+            state.input_types = detect_input_modalities(state.user_query, [file.storage_path for file in state.uploaded_files])
+        if not state.uploaded_files and state.input_metadata:
+            state.input_types = detect_input_modalities(state.user_query, list(state.input_metadata.get("paths", [])))
+        return state
+
+    def _task_analyzer(self, state: WorkflowState) -> WorkflowState:
+        input_types = list(dict.fromkeys([key for key, value in state.input_types.items() if value]))
+        state.task_state = TaskAnalyzer().analyze(state.user_query, input_types)
+        return state
+
+    def _policy_router(self, state: WorkflowState) -> WorkflowState:
+        state.selected_routes = PolicyRouter().route(state)
+        state.pending_routes = list(state.selected_routes)
+        state.completed_routes = []
+        state.current_route = ""
+        return state
+
+    def _document_route(self, state: WorkflowState) -> WorkflowState:
+        document_node = DocumentNode(retriever=DocumentRetriever())
+        for file_record in state.uploaded_files:
+            if file_record.file_type != "pdf":
+                continue
+            evidence = document_node.run(file_record.storage_path, state.user_query, file_record.file_id)
+            state.retrieved_evidence.extend([item.model_dump() for item in evidence])
+            state.document_results.append({
+                "source_file": file_record.original_name,
+                "file_id": file_record.file_id,
+                "pages": len(PDFParser.extract_text(file_record.storage_path).get("pages", [])),
+                "evidence_count": len(evidence),
+            })
+        return state
+
+    def _data_route(self, state: WorkflowState) -> WorkflowState:
+        data_node = DataNode()
+
+        for file_record in state.uploaded_files:
+
+            if file_record.file_type not in {"csv", "xlsx"}:
+                continue
+
+            if file_record.file_type == "csv":
+                with open(
+                    file_record.storage_path,
+                    "r",
+                    encoding="utf-8",
+                    errors="replace",
+                ) as handle:
+                    source = handle.read()
+
+            else:
+                source = file_record.storage_path
+
+            result = data_node.run(
+                source=source,
+                file_type=file_record.file_type,
+                user_query=state.user_query,
+            )
+
+            state.data_results.append(
+                {
+                    "source_file": file_record.original_name,
+                    "file_id": file_record.file_id,
+                    "file_type": file_record.file_type,
+                    "result": result,
+                }
+            )
+
+        return state
+
+    def _vision_route(self, state: WorkflowState) -> WorkflowState:
+        for file_record in state.uploaded_files:
+            if file_record.file_type != "image":
+                continue
+            result = VisionNode(analyzer=VisionAnalyzer()).run(file_record.storage_path, state.user_query)
+            state.vision_results.append({
+                "source_file": file_record.original_name,
+                "file_id": file_record.file_id,
+                "result": result,
+            })
+        return state
+
+    def _reasoning_route(self, state: WorkflowState) -> WorkflowState:
+        result = ReasoningNode().run(
+            user_query=state.user_query,
+            evidence=state.retrieved_evidence,
+            data_results=state.data_results,
+            vision_results=state.vision_results,
+        )
+
+        state.reasoning_results.append(result)
+
+        return state
+
+    def _execution_dispatch(self, state: WorkflowState) -> WorkflowState:
+        if not state.pending_routes:
+            state.current_route = ""
+            return state
+
+        state.current_route = state.pending_routes[0]
+        state.pending_routes = state.pending_routes[1:]
+        state.completed_routes = list(dict.fromkeys(state.completed_routes + [state.current_route]))
+        return state
+
+    def _aggregate_results(self, state: WorkflowState) -> WorkflowState:
+        state.aggregated_results = {
+            "document_results": state.document_results,
+            "data_results": state.data_results,
+            "vision_results": state.vision_results,
+            "reasoning_results": state.reasoning_results,
+            "retrieved_evidence": state.retrieved_evidence,
+        }
+        return state
+
+    def _complexity_gate(self, state: WorkflowState) -> WorkflowState:
+        decision = ComplexityGate().evaluate(state.aggregated_results)
+
+        state.synthesis_required = bool(
+            decision.get("synthesis_required", False)
+        )
+
+        return state
+
+    def _synthesis(self, state: WorkflowState) -> WorkflowState:
+        if not state.synthesis_required:
+            return state
+
+        result = SynthesisNode().run(
+            state.user_query,
+            state.retrieved_evidence,
+            state.data_results,
+            state.vision_results,
+        )
+
+        state.synthesis_result = result
+
+        return state
+
+    def _final_answer(self, state: WorkflowState) -> WorkflowState:
+
+        # Case 1: A synthesis result exists
+        if state.synthesis_result:
+            answer = state.synthesis_result.get("answer")
+
+            if answer:
+                state.final_answer = answer
+                return state
+
+        # Case 2: Use the reasoning result
+        if state.reasoning_results:
+            latest_reasoning = state.reasoning_results[-1]
+
+            answer = latest_reasoning.get("answer")
+
+            if answer:
+                state.final_answer = answer
+                return state
+
+        # Case 3: Fallback for deterministic analysis
+        state.final_answer = (
+            f"Analysis completed with "
+            f"{len(state.retrieved_evidence)} evidence item(s), "
+            f"{len(state.data_results)} data result(s), and "
+            f"{len(state.vision_results)} vision result(s)."
+        )
+
+        return state
+
+    def _verifier(self, state: WorkflowState) -> WorkflowState:
+        answer = state.final_answer or state.synthesis_result.get("answer", "")
+        report = {
+            "title": "Analysis Report",
+            "sections": {
+                "answer": answer,
+                "evidence_count": len(state.retrieved_evidence),
+                "document_results": state.document_results,
+                "data_results": state.data_results,
+                "vision_results": state.vision_results,
+            },
+        }
+        verification = Verifier().verify(answer, state.retrieved_evidence, report)
+        state.verification_results = [verification]
+        state.verification_status = verification.get("verification_status", "passed")
+        return state
+
+    def _repair(self, state: WorkflowState) -> WorkflowState:
+        if state.verification_status == "passed":
+            return state
+        state.repair_attempts += 1
+        if state.repair_attempts >= self.max_repair_attempts:
+            state.verification_status = "failed_terminal"
+            return state
+
+        repaired = RepairNode(max_attempts=self.max_repair_attempts).repair(
+            {"final_answer": state.final_answer, "synthesis_result": state.synthesis_result},
+            state.verification_results[0].get("failures", []) if state.verification_results else [],
+            state.retrieved_evidence,
+        )
+        state.final_answer = repaired.get("final_answer", state.final_answer)
+        state.synthesis_result = repaired.get("synthesis_result", state.synthesis_result)
+        return state
+
+    def _deliverable(self, state: WorkflowState) -> WorkflowState:
+        report = {
+            "title": "Analysis Report",
+            "sections": {
+                "answer": state.final_answer or state.synthesis_result.get("answer", ""),
+                "evidence": state.retrieved_evidence,
+                "documents": state.document_results,
+                "data": state.data_results,
+                "vision": state.vision_results,
+            },
+        }
+        output_path = f"outputs/{state.request_id}_report.docx"
+        generated_path = DeliverableNode().generate(report, output_path)
+        state.generated_deliverables = [generated_path]
+        return state
+
+    def build(self):
+        self.graph.add_node("input_processor", self._input_processor)
+        self.graph.add_node("task_analyzer", self._task_analyzer)
+        self.graph.add_node("policy_router", self._policy_router)
+        self.graph.add_node("execution_dispatch", self._execution_dispatch)
+        self.graph.add_node("document_route", self._document_route)
+        self.graph.add_node("data_route", self._data_route)
+        self.graph.add_node("vision_route", self._vision_route)
+        self.graph.add_node("reasoning_route", self._reasoning_route)
+        self.graph.add_node("aggregate_results", self._aggregate_results)
+        self.graph.add_node("complexity_gate", self._complexity_gate)
+        self.graph.add_node("synthesis", self._synthesis)
+        self.graph.add_node("final_answer", self._final_answer)
+        self.graph.add_node("verifier", self._verifier)
+        self.graph.add_node("repair", self._repair)
+        self.graph.add_node("deliverable", self._deliverable)
+
+        self.graph.set_entry_point("input_processor")
+        self.graph.add_edge("input_processor", "task_analyzer")
+        self.graph.add_edge("task_analyzer", "policy_router")
+        self.graph.add_conditional_edges(
+            "policy_router",
+            lambda state: "dispatch" if state.selected_routes else "aggregate_results",
+            {"dispatch": "execution_dispatch", "aggregate_results": "aggregate_results"},
+        )
+        self.graph.add_conditional_edges(
+            "execution_dispatch",
+            lambda state: state.current_route if state.current_route else "aggregate_results",
+            {
+                "document": "document_route",
+                "data": "data_route",
+                "vision": "vision_route",
+                "reasoning": "reasoning_route",
+                "aggregate_results": "aggregate_results",
+            },
+        )
+        self.graph.add_edge("document_route", "execution_dispatch")
+        self.graph.add_edge("data_route", "execution_dispatch")
+        self.graph.add_edge("vision_route", "execution_dispatch")
+        self.graph.add_edge("reasoning_route", "execution_dispatch")
+        self.graph.add_edge("aggregate_results", "complexity_gate")
+        self.graph.add_conditional_edges(
+            "complexity_gate",
+            lambda state: "synthesis" if state.synthesis_required else "final_answer",
+            {
+                "synthesis": "synthesis",
+                "final_answer": "final_answer",
+            },
+        )
+
+        self.graph.add_edge("synthesis", "final_answer")
+
+        self.graph.add_edge("final_answer", "verifier")
+        self.graph.add_conditional_edges(
+            "verifier",
+            lambda state: (
+                "pass"
+                if state.verification_status == "passed"
+                else "fail_retry"
+                if state.verification_status == "failed" and state.repair_attempts < self.max_repair_attempts
+                else "fail_terminal" if state.verification_status == "failed" else "pass"
+            ),
+            {"pass": "deliverable", "fail_retry": "repair", "fail_terminal": END},
+        )
+        self.graph.add_edge("repair", "verifier")
+        self.graph.add_edge("deliverable", END)
+        return self.graph.compile()
