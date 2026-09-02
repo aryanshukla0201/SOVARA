@@ -25,16 +25,53 @@ class WorkflowGraph:
         self.graph = StateGraph(WorkflowState)
         self.max_repair_attempts = 3
 
+    def _trace(
+        self,
+        state: WorkflowState,
+        node_name: str,
+        model_used: str = "n/a",
+        tools_used: list[str] | None = None,
+        success: bool = True,
+        relevant_output_ids: list[str] | None = None,
+    ) -> None:
+        state.execution_trace.append(
+            {
+                "node_name": node_name,
+                "model_used": model_used,
+                "tools_used": tools_used or [],
+                "success": success,
+                "relevant_output_ids": relevant_output_ids or [],
+            }
+        )
+
     def _input_processor(self, state: WorkflowState) -> WorkflowState:
         if state.user_query:
             state.input_types = detect_input_modalities(state.user_query, [file.storage_path for file in state.uploaded_files])
         if not state.uploaded_files and state.input_metadata:
             state.input_types = detect_input_modalities(state.user_query, list(state.input_metadata.get("paths", [])))
+
+        self._trace(
+            state,
+            node_name="input_processor",
+            model_used="n/a",
+            tools_used=["file_detection"],
+            relevant_output_ids=[
+                f"input_{len(state.uploaded_files)}"
+            ],
+        )
         return state
 
     def _task_analyzer(self, state: WorkflowState) -> WorkflowState:
         input_types = list(dict.fromkeys([key for key, value in state.input_types.items() if value]))
         state.task_state = TaskAnalyzer().analyze(state.user_query, input_types)
+
+        self._trace(
+            state,
+            node_name="task_analyzer",
+            model_used="qwen3",
+            tools_used=["TaskAnalyzer"],
+            relevant_output_ids=["task_1"],
+        )
         return state
 
     def _policy_router(self, state: WorkflowState) -> WorkflowState:
@@ -42,6 +79,14 @@ class WorkflowGraph:
         state.pending_routes = list(state.selected_routes)
         state.completed_routes = []
         state.current_route = ""
+
+        self._trace(
+            state,
+            node_name="policy_router",
+            model_used="n/a",
+            tools_used=["PolicyRouter"],
+            relevant_output_ids=list(state.selected_routes),
+        )
         return state
 
     def _document_route(self, state: WorkflowState) -> WorkflowState:
@@ -57,6 +102,17 @@ class WorkflowGraph:
                 "pages": len(PDFParser.extract_text(file_record.storage_path).get("pages", [])),
                 "evidence_count": len(evidence),
             })
+
+            self._trace(
+            state,
+            node_name="document_route",
+            model_used="n/a",
+            tools_used=["PyMuPDF", "DocumentRetriever"],
+            relevant_output_ids=[
+                item["file_id"]
+                for item in state.document_results
+            ],
+        )
         return state
 
     def _data_route(self, state: WorkflowState) -> WorkflowState:
@@ -94,6 +150,16 @@ class WorkflowGraph:
                 }
             )
 
+            self._trace(
+            state,
+            node_name="data_route",
+            model_used="n/a",
+            tools_used=["DataNode"],
+            relevant_output_ids=[
+                item["file_id"]
+                for item in state.data_results
+            ],
+        )
         return state
 
     def _vision_route(self, state: WorkflowState) -> WorkflowState:
@@ -106,6 +172,17 @@ class WorkflowGraph:
                 "file_id": file_record.file_id,
                 "result": result,
             })
+
+            self._trace(
+            state,
+            node_name="vision_route",
+            model_used="vision",
+            tools_used=["VisionAnalyzer"],
+            relevant_output_ids=[
+                item["file_id"]
+                for item in state.vision_results
+            ],
+        )
         return state
 
     def _reasoning_route(self, state: WorkflowState) -> WorkflowState:
@@ -118,6 +195,16 @@ class WorkflowGraph:
 
         state.reasoning_results.append(result)
 
+        self._trace(
+            state,
+            node_name="reasoning_route",
+            model_used="qwen3",
+            tools_used=["ReasoningNode"],
+            relevant_output_ids=[
+                f"reasoning_{len(state.reasoning_results)}"
+            ],
+        )
+
         return state
 
     def _execution_dispatch(self, state: WorkflowState) -> WorkflowState:
@@ -128,6 +215,16 @@ class WorkflowGraph:
         state.current_route = state.pending_routes[0]
         state.pending_routes = state.pending_routes[1:]
         state.completed_routes = list(dict.fromkeys(state.completed_routes + [state.current_route]))
+
+        self._trace(
+            state,
+            node_name="execution_dispatch",
+            model_used="n/a",
+            tools_used=["route_dispatch"],
+            relevant_output_ids=[
+                state.current_route
+            ] if state.current_route else [],
+        )
         return state
 
     def _aggregate_results(self, state: WorkflowState) -> WorkflowState:
@@ -138,6 +235,14 @@ class WorkflowGraph:
             "reasoning_results": state.reasoning_results,
             "retrieved_evidence": state.retrieved_evidence,
         }
+
+        self._trace(
+            state,
+            node_name="aggregate_results",
+            model_used="n/a",
+            tools_used=["result_aggregation"],
+            relevant_output_ids=["aggregated_results"],
+        )
         return state
 
     def _complexity_gate(self, state: WorkflowState) -> WorkflowState:
@@ -147,6 +252,17 @@ class WorkflowGraph:
             decision.get("synthesis_required", False)
         )
 
+        self._trace(
+            state,
+            node_name="complexity_gate",
+            model_used="n/a",
+            tools_used=["ComplexityGate"],
+            relevant_output_ids=[
+                "synthesis_required"
+                if state.synthesis_required
+                else "synthesis_not_required"
+            ],
+        )
         return state
 
     def _synthesis(self, state: WorkflowState) -> WorkflowState:
@@ -162,6 +278,13 @@ class WorkflowGraph:
 
         state.synthesis_result = result
 
+        self._trace(
+            state,
+            node_name="synthesis",
+            model_used="qwen3",
+            tools_used=["SynthesisNode"],
+            relevant_output_ids=["synthesis_result"],
+        )
         return state
 
     def _final_answer(self, state: WorkflowState) -> WorkflowState:
@@ -172,6 +295,15 @@ class WorkflowGraph:
 
             if answer:
                 state.final_answer = answer
+
+                self._trace(
+                    state,
+                    node_name="final_answer",
+                    model_used="qwen3",
+                    tools_used=["answer_selection"],
+                    relevant_output_ids=["final_answer"],
+                )
+
                 return state
 
         # Case 2: Use the reasoning result
@@ -182,6 +314,15 @@ class WorkflowGraph:
 
             if answer:
                 state.final_answer = answer
+
+                self._trace(
+                    state,
+                    node_name="final_answer",
+                    model_used="qwen3",
+                    tools_used=["answer_selection"],
+                    relevant_output_ids=["final_answer"],
+                )
+
                 return state
 
         # Case 3: Fallback for deterministic analysis
@@ -190,6 +331,14 @@ class WorkflowGraph:
             f"{len(state.retrieved_evidence)} evidence item(s), "
             f"{len(state.data_results)} data result(s), and "
             f"{len(state.vision_results)} vision result(s)."
+        )
+
+        self._trace(
+            state,
+            node_name="final_answer",
+            model_used="n/a",
+            tools_used=["answer_selection"],
+            relevant_output_ids=["final_answer"],
         )
 
         return state
@@ -209,6 +358,16 @@ class WorkflowGraph:
         verification = Verifier().verify(answer, state.retrieved_evidence, report)
         state.verification_results = [verification]
         state.verification_status = verification.get("verification_status", "passed")
+
+        self._trace(
+            state,
+            node_name="verifier",
+            model_used="qwen3",
+            tools_used=["Verifier"],
+            relevant_output_ids=[
+                "verification_1"
+            ],
+        )
         return state
 
     def _repair(self, state: WorkflowState) -> WorkflowState:
@@ -226,6 +385,14 @@ class WorkflowGraph:
         )
         state.final_answer = repaired.get("final_answer", state.final_answer)
         state.synthesis_result = repaired.get("synthesis_result", state.synthesis_result)
+
+        self._trace(
+            state,
+            node_name="repair",
+            model_used="qwen3",
+            tools_used=["RepairNode"],
+            relevant_output_ids=["repaired_answer"],
+        )
         return state
 
     def _deliverable(self, state: WorkflowState) -> WorkflowState:
@@ -242,8 +409,18 @@ class WorkflowGraph:
         output_path = f"outputs/{state.request_id}_report.docx"
         generated_path = DeliverableNode().generate(report, output_path)
         state.generated_deliverables = [generated_path]
-        return state
 
+        self._trace(
+            state,
+            node_name="deliverable",
+            model_used="n/a",
+            tools_used=["python-docx"],
+            relevant_output_ids=[
+                generated_path
+            ],
+        )
+        return state
+    
     def build(self):
         self.graph.add_node("input_processor", self._input_processor)
         self.graph.add_node("task_analyzer", self._task_analyzer)
