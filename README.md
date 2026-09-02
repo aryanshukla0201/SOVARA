@@ -1,6 +1,6 @@
 # SOVARA
 
-### Smart Orchestrated Versatile Analysis & Reasoning Assistant
+### Sovereign Orchestration for Verified AI Reasoning & Automation
 
 SOVARA is a modular multimodal AI analysis system designed to process different types of inputs, select appropriate analysis capabilities, execute specialized tools, reason over the resulting evidence, verify the generated answer, and produce a structured deliverable.
 
