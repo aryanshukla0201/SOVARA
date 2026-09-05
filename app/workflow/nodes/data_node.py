@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from app.tools.data.csv_analyzer import CSVAnalyzer
 from app.tools.data.excel_analyzer import ExcelAnalyzer
 
@@ -20,23 +22,39 @@ class DataNode:
         user_query: str = "",
     ) -> dict:
 
+        result = None
+        tool_used = None
+
         if file_type == "csv":
-            return self.csv_analyzer.analyze_csv(
+            result = self.csv_analyzer.analyze_csv(
                 source,
                 user_query,
             )
+            tool_used = "CSVAnalyzer"
 
-        if file_type == "xlsx":
+        elif file_type == "xlsx":
             if not isinstance(source, str):
                 raise ValueError(
                     "Excel analysis requires a file path."
                 )
 
-            return self.excel_analyzer.analyze_excel(
+            result = self.excel_analyzer.analyze_excel(
                 source,
                 user_query,
             )
+            tool_used = "ExcelAnalyzer"
 
-        raise ValueError(
-            f"Unsupported data file type: {file_type}"
-        )
+        else:
+            raise ValueError(
+                f"Unsupported data file type: {file_type}"
+            )
+
+        evidence_id = f"data_{uuid.uuid4().hex[:8]}"
+
+        return {
+            "evidence_id": evidence_id,
+            "evidence_type": "data_result",
+            "tool_used": tool_used,
+            "file_type": file_type,
+            "result": result,
+        }

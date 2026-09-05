@@ -6,11 +6,7 @@ import pandas as pd
 
 
 class ExcelAnalyzer:
-    def analyze_excel(
-        self,
-        file_path: str,
-        user_query: str = "",
-    ) -> dict[str, Any]:
+    def analyze_excel(self, file_path: str, user_query: str = "",) -> dict[str, Any]:
 
         df = pd.read_excel(file_path)
 

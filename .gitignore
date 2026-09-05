@@ -45,3 +45,12 @@ outputs/*
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Local test images
+data/test/*.png
+data/test/*.jpg
+data/test/*.jpeg
+
+# Local workflow test scripts/results
+*_workflow_result.json
+*_result.json

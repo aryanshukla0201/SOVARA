@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.models.model_factory import ModelFactory
 from app.state.task_state import TaskState
+from app.services.execution_telemetry import ExecutionTelemetry
 
 
 class TaskAnalyzer:
@@ -24,8 +25,8 @@ class TaskAnalyzer:
         "general",
     }
 
-    def __init__(self, model=None):
-        self.model = model or ModelFactory.create("qwen")
+    def __init__(self, model=None, telemetry: ExecutionTelemetry | None = None):
+        self.model = model or ModelFactory.create("qwen", telemetry=telemetry)
 
     def analyze(
         self,

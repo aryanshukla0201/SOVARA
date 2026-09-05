@@ -17,6 +17,7 @@ from app.workflow.nodes.input_processor import (
 
 router = APIRouter()
 logger = get_logger("api.routes")
+analysis_store: dict[str, dict] = {}
 
 
 def run_multimodal_analysis(
@@ -86,7 +87,9 @@ def run_multimodal_analysis(
     # RUN ACTUAL SOVARA LANGGRAPH WORKFLOW
     # ---------------------------------------------------------
 
-    workflow = WorkflowGraph().build()
+    workflow_builder = WorkflowGraph()
+
+    workflow = workflow_builder.build()
 
     final_state = workflow.invoke(state)
 
@@ -101,15 +104,25 @@ def run_multimodal_analysis(
     # API RESPONSE
     # ---------------------------------------------------------
 
-    return {
-        "request_id": result.request_id,
-        "status": "completed",
-        "final_answer": result.final_answer,
-        "evidence": result.retrieved_evidence,
-        "verification_status": result.verification_status,
-        "traceability": result.execution_trace,
-        "generated_deliverables": result.generated_deliverables,
+    response = {
+            "request_id": result.request_id,
+            "status": "completed",
+            "final_answer": result.final_answer,
+            "evidence": [
+                *result.retrieved_evidence,
+                *result.data_results,
+                *result.vision_results,
+            ],
+            "verification_status": result.verification_status,
+            "verification_results": result.verification_results,
+            "traceability": result.execution_trace,
+            "execution_telemetry": result.execution_telemetry,
+            "generated_deliverables": result.generated_deliverables,
     }
+
+    analysis_store[result.request_id] = response
+
+    return response
 
 
 @router.post("/analyze")
@@ -127,13 +140,20 @@ async def analyze(
 
 @router.get("/analysis/{request_id}")
 async def get_analysis_status(request_id: str):
+    result = analysis_store.get(request_id)
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Analysis not found",
+        )
+
     return {
-        "request_id": request_id,
-        "status": "completed",
-        "final_answer": (
-            "Analysis complete. "
-            "Run /download to fetch the deliverable."
-        ),
+        "request_id": result["request_id"],
+        "status": result["status"],
+        "verification_status": result["verification_status"],
+        "final_answer": result["final_answer"],
+        "generated_deliverables": result["generated_deliverables"],
     }
 
 

@@ -3,11 +3,12 @@ from __future__ import annotations
 import json
 
 from app.models.model_factory import ModelFactory
+from app.services.execution_telemetry import ExecutionTelemetry
 
 
 class ReasoningNode:
-    def __init__(self):
-        self.model = ModelFactory.create("qwen")
+    def __init__(self,telemetry: ExecutionTelemetry | None = None):
+        self.model = ModelFactory.create("qwen", telemetry=telemetry)
 
     def run(
         self,
@@ -40,7 +41,6 @@ class ReasoningNode:
                 if not text:
                     continue
 
-                # Prevent excessively large prompts
                 text = text[:1500]
 
                 document_context.append(
@@ -62,32 +62,70 @@ CONTENT:
                 )
 
         # -------------------------------------------------
-        # DATA RESULTS
+        # DATA EVIDENCE
         # -------------------------------------------------
         if data_results:
 
-            context_parts.append(
-                "DATA ANALYSIS RESULTS:\n"
-                + json.dumps(
-                    data_results,
-                    indent=2,
-                    default=str,
+            data_context = []
+
+            for item in data_results:
+
+                if not isinstance(item, dict):
+                    continue
+
+                evidence_id = item.get("evidence_id", "")
+                tool_used = item.get("tool_used", "")
+                file_type = item.get("file_type", "")
+                result = item.get("result", {})
+
+                data_context.append(
+                    f"""
+DATA EVIDENCE ID: {evidence_id}
+TOOL: {tool_used}
+FILE TYPE: {file_type}
+
+RESULT:
+{json.dumps(result, indent=2, default=str)}
+"""
                 )
-            )
+
+            if data_context:
+
+                context_parts.append(
+                    "DATA ANALYSIS RESULTS:\n"
+                    + "\n\n".join(data_context)
+                )
 
         # -------------------------------------------------
         # VISION RESULTS
         # -------------------------------------------------
         if vision_results:
 
-            context_parts.append(
-                "VISION ANALYSIS RESULTS:\n"
-                + json.dumps(
-                    vision_results,
-                    indent=2,
-                    default=str,
+            vision_context = []
+
+            for item in vision_results:
+
+                if not isinstance(item, dict):
+                    continue
+
+                evidence_id = item.get("evidence_id", "")
+                result = item.get("result", item)
+
+                vision_context.append(
+                    f"""
+VISION EVIDENCE ID: {evidence_id}
+
+RESULT:
+{json.dumps(result, indent=2, default=str)}
+"""
                 )
-            )
+
+            if vision_context:
+
+                context_parts.append(
+                    "VISION ANALYSIS RESULTS:\n"
+                    + "\n\n".join(vision_context)
+                )
 
         # -------------------------------------------------
         # NO CONTEXT AVAILABLE
@@ -127,33 +165,89 @@ AVAILABLE EXECUTION RESULTS:
 
 TASK:
 
-Answer the user's request using only the information provided in
+Answer the user's request using ONLY the information provided in
 the execution results above.
 
-Requirements:
+GROUNDING AND CITATION RULES:
 
-1. Produce a clear and useful answer rather than copying the source
-   text verbatim.
+1. Do not invent facts, numbers, explanations, causes, trends,
+   relationships, or conclusions.
 
-2. Summarize and interpret the information relevant to the user's
-   request.
+2. Every claim based on DOCUMENT EVIDENCE must include the exact
+   document evidence ID that supports the claim.
 
-3. Do not invent information that is not present in the provided
-   execution results.
+3. Every claim based on DATA ANALYSIS RESULTS must include the exact
+   DATA EVIDENCE ID that supports the claim.
 
-4. When making statements based on document evidence, include the
-   corresponding evidence ID in square brackets.
+4. Every claim based on VISION ANALYSIS RESULTS must include the exact
+   VISION EVIDENCE ID that supports the claim.
 
-5. For example:
-   "The candidate has experience with diffusion-model research
-   [test_pdf_001_ev_001]."
+5. Citations MUST use this exact format:
 
-6. If data analysis results are provided, explain what the results
-   mean rather than simply repeating JSON values.
+   [evidence_id]
 
-7. Organize the answer with headings or bullet points when useful.
+6. Valid examples:
 
-Return only the final answer for the user.
+   The document describes an automated subsidy recommendation system
+   [file_12345678_ev_001].
+
+   Revenue increased from 100 to 180, representing an 80% increase
+   [data_12345678].
+
+7. Invalid citation formats:
+
+   [**file_12345678_ev_001**]
+   (file_12345678_ev_001)
+   file_12345678_ev_001
+   [file_12345678_ev_001, file_12345678_ev_002]
+
+8. Never put Markdown formatting inside citation brackets.
+
+9. Never modify, shorten, rename, or invent an evidence ID.
+
+10. Only cite evidence IDs that actually appear in the execution
+    results above.
+
+11. If multiple evidence items support the same claim, cite them
+    separately:
+
+    [evidence_id_1] [evidence_id_2]
+
+12. Do NOT use a DOCUMENT evidence ID to support a DATA claim.
+
+13. Do NOT use a DATA evidence ID to support a DOCUMENT claim.
+
+14. Do NOT infer causation between different sources unless the
+    provided evidence explicitly establishes that relationship.
+
+15. Preserve deterministic numerical results exactly.
+
+16. If the data result says:
+    start = 100
+    end = 180
+    percentage_change = 80
+
+    you may state:
+
+    Revenue increased from 100 to 180, representing an 80% increase
+    [data_12345678].
+
+17. Do NOT introduce additional numerical claims that are not present
+    in the data analysis results.
+
+18. If the available evidence is insufficient to answer part of the
+    request, explicitly state that it is insufficient.
+
+19. Clearly distinguish observations from conclusions.
+
+20. Organize the answer with headings or bullet points when useful.
+
+IMPORTANT:
+
+The answer will be automatically checked by a strict verification
+system. Citation syntax must be exact.
+
+Return ONLY the final answer for the user.
 """
 
         # -------------------------------------------------
@@ -163,10 +257,11 @@ Return only the final answer for the user.
             prompt=prompt,
             system_prompt=(
                 "You are a careful AI reasoning engine. "
-                "Your job is to analyze grounded evidence and execution "
-                "results and produce accurate answers. "
-                "Never invent facts. "
-                "Prefer concise, structured, evidence-grounded responses."
+                "Use only grounded execution results. "
+                "Preserve exact evidence citations. "
+                "Never invent facts or relationships. "
+                "Preserve deterministic numerical results. "
+                "Clearly distinguish observations, conclusions, and limitations."
             ),
         )
 

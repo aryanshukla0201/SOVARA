@@ -40,6 +40,7 @@ class WorkflowState(BaseModel):
     synthesis_result: dict = Field(default_factory=dict)
     verification_results: list[dict] = Field(default_factory=list)
     verification_status: str = "pending"
+    execution_telemetry: dict = Field(default_factory=dict)
     repair_attempts: int = 0
     final_answer: str = ""
     requested_deliverable: str = "report"

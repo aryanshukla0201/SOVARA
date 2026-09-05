@@ -24,7 +24,7 @@ if st.button("Run analysis"):
         f"{BACKEND_URL}/analyze",
         data=payload,
         files=[("files", (name, content, mime)) for name, content, mime in uploaded_files],
-        timeout=60,
+        timeout=300,
     )
     if response.ok:
         data = response.json()

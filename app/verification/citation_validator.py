@@ -4,16 +4,27 @@ import re
 
 
 class CitationValidator:
+
     def validate(self, answer: str, evidence_ids: list[str]) -> bool:
+
         # If there is no evidence, citations are not required.
         if not evidence_ids:
             return True
 
         # Find evidence citations in the format:
-        # [test_pdf_001_ev_001]
+        # [file_123_ev_001]
         cited_ids = re.findall(r"\[([^\]]+)\]", answer)
 
-        # Document-based answers must contain at least one citation.
+        print("\n===== CITATION DEBUG =====")
+        print("ANSWER:")
+        print(answer)
+        print("CITED IDS:")
+        print(cited_ids)
+        print("VALID EVIDENCE IDS:")
+        print(evidence_ids)
+        print("==========================")
+
+        # Evidence-backed answers must contain at least one citation.
         if not cited_ids:
             return False
 

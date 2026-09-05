@@ -8,6 +8,7 @@ import requests
 
 from app.core.config import get_settings
 from app.models.base import BaseModelAdapter
+from app.services.execution_telemetry import ExecutionTelemetry
 
 
 class QwenAdapter(BaseModelAdapter):
@@ -18,11 +19,13 @@ class QwenAdapter(BaseModelAdapter):
         self,
         model_name: str | None = None,
         base_url: str | None = None,
+        telemetry: ExecutionTelemetry | None = None,
     ):
         settings = get_settings()
 
         self.model_name = model_name or settings.qwen_model
         self.base_url = base_url or settings.ollama_base_url
+        self.telemetry = telemetry
 
     def _call_ollama(
         self,
@@ -44,7 +47,15 @@ class QwenAdapter(BaseModelAdapter):
         if options:
             payload["options"] = options
 
+        
         try:
+            if self.telemetry is not None:
+                self.telemetry.record_llm_call(
+                    model_name=self.model_name,
+                    local=self.base_url.startswith(
+                        ("http://localhost", "http://127.0.0.1")
+                    ),
+                )
             response = requests.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
