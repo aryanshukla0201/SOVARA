@@ -13,7 +13,6 @@ from app.workflow.nodes.document_node import DocumentNode
 from app.workflow.nodes.input_processor import detect_input_modalities
 from app.workflow.nodes.policy_router import PolicyRouter
 from app.services.evidence_normalizer import EvidenceNormalizer
-from app.services.embedding_service import EmbeddingService
 from app.workflow.nodes.reasoning_node import ReasoningNode
 from app.workflow.nodes.repair import RepairNode
 from app.workflow.nodes.synthesis import SynthesisNode
@@ -113,15 +112,36 @@ class WorkflowGraph:
 
     def _document_route(self, state: WorkflowState) -> WorkflowState:
         document_node = DocumentNode(retriever=DocumentRetriever())
+
         for file_record in state.uploaded_files:
-            if file_record.file_type != "pdf":
+            if file_record.file_type not in {"pdf", "docx"}:
                 continue
-            evidence = document_node.run(file_record.storage_path, state.user_query, file_record.file_id)
-            state.retrieved_evidence.extend([item.model_dump() for item in evidence])
+
+            evidence = document_node.run(
+                file_record.storage_path,
+                state.user_query,
+                file_record.file_id,
+                file_record.file_type,
+            )
+
+            state.retrieved_evidence.extend(
+                [item.model_dump() for item in evidence]
+            )
+
+            if file_record.file_type == "pdf":
+                pages = len(
+                    PDFParser.extract_text(
+                        file_record.storage_path
+                    ).get("pages", [])
+                )
+            else:
+                pages = None
+
             state.document_results.append({
                 "source_file": file_record.original_name,
                 "file_id": file_record.file_id,
-                "pages": len(PDFParser.extract_text(file_record.storage_path).get("pages", [])),
+                "file_type": file_record.file_type,
+                "pages": pages,
                 "evidence_count": len(evidence),
             })
 
@@ -568,7 +588,7 @@ class WorkflowGraph:
         }
 
         requested_format = (
-            state.requested_deliverable or "report"
+            state.requested_deliverable or ""
         ).lower().strip()
 
         # ---------------------------------------------------------
@@ -613,19 +633,37 @@ class WorkflowGraph:
             tool_used = "json"
 
         # ---------------------------------------------------------
-        # SAFE FALLBACK
+        # NO DELIVERABLE REQUESTED
+        # ---------------------------------------------------------
+
+        elif not requested_format:
+            state.generated_deliverables = []
+
+            self._trace(
+                state,
+                node_name="deliverable",
+                model_used="n/a",
+                tools_used=[],
+                relevant_output_ids=[],
+            )
+
+            return state
+
+        # ---------------------------------------------------------
+        # UNSUPPORTED FORMAT
         # ---------------------------------------------------------
         else:
-            output_path = (
-                f"outputs/{state.request_id}_report.docx"
+            state.generated_deliverables = []
+
+            self._trace(
+                state,
+                node_name="deliverable",
+                model_used="n/a",
+                tools_used=[],
+                relevant_output_ids=[],
             )
 
-            generated_path = DeliverableNode().generate(
-                report,
-                output_path,
-            )
-
-            tool_used = "python-docx"
+            return state
 
         state.generated_deliverables = [generated_path]
 

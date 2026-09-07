@@ -23,5 +23,5 @@ class ResultState(BaseModel):
     verification_status: str = "pending"
     repair_attempts: int = 0
     final_answer: str = ""
-    requested_deliverable: str = "report"
+    requested_deliverable: str | None = None
     generated_deliverables: list[str] = Field(default_factory=list)

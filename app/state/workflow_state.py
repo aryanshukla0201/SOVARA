@@ -43,6 +43,6 @@ class WorkflowState(BaseModel):
     execution_telemetry: dict = Field(default_factory=dict)
     repair_attempts: int = 0
     final_answer: str = ""
-    requested_deliverable: str = "report"
+    requested_deliverable: str | None = None
     generated_deliverables: list[str] = Field(default_factory=list)
     execution_trace: list[dict] = Field(default_factory=list)

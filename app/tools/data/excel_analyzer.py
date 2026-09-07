@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pandas as pd
 
 
 class ExcelAnalyzer:
-    def analyze_excel(self, file_path: str, user_query: str = "",) -> dict[str, Any]:
+    def analyze_excel(
+        self,
+        file_path: str,
+        user_query: str = "",
+    ) -> dict[str, Any]:
 
         df = pd.read_excel(file_path)
 
@@ -17,7 +22,11 @@ class ExcelAnalyzer:
                 "metric": None,
             }
 
-        numeric_columns = df.select_dtypes(include="number").columns.tolist()
+        numeric_columns = (
+            df.select_dtypes(include="number")
+            .columns
+            .tolist()
+        )
 
         if not numeric_columns:
             return {
@@ -27,27 +36,88 @@ class ExcelAnalyzer:
                 "dataset_rows": len(df),
             }
 
+        query = user_query.lower()
+
         metric = numeric_columns[0]
+
+        for column in numeric_columns:
+            if re.search(
+                rf"\b{re.escape(str(column).lower())}\b",
+                query,
+            ):
+                metric = column
+                break
 
         values = (
             pd.to_numeric(df[metric], errors="coerce")
             .dropna()
         )
 
+        if values.empty:
+            return {
+                "analysis_type": "no_valid_values",
+                "metric": metric,
+                "dataset_rows": len(df),
+            }
+
+        if any(
+            word in query
+            for word in ("average", "mean", "avg")
+        ):
+            return {
+                "analysis_type": "average",
+                "metric": metric,
+                "average": round(float(values.mean()), 2),
+                "dataset_rows": len(df),
+                "valid_values": len(values),
+                "inspected_columns": list(df.columns),
+            }
+
+        if any(
+            word in query
+            for word in ("sum", "total")
+        ):
+            return {
+                "analysis_type": "sum",
+                "metric": metric,
+                "sum": round(float(values.sum()), 2),
+                "dataset_rows": len(df),
+                "valid_values": len(values),
+                "inspected_columns": list(df.columns),
+            }
+
+        if any(
+            word in query
+            for word in ("minimum", "minimum value", "min")
+        ):
+            return {
+                "analysis_type": "minimum",
+                "metric": metric,
+                "minimum": float(values.min()),
+                "dataset_rows": len(df),
+                "valid_values": len(values),
+                "inspected_columns": list(df.columns),
+            }
+
+        if any(
+            word in query
+            for word in ("maximum", "maximum value", "max")
+        ):
+            return {
+                "analysis_type": "maximum",
+                "metric": metric,
+                "maximum": float(values.max()),
+                "dataset_rows": len(df),
+                "valid_values": len(values),
+                "inspected_columns": list(df.columns),
+            }
+
         if len(values) < 2:
             return {
                 "analysis_type": "trend_analysis",
                 "metric": metric,
-                "start_value": (
-                    float(values.iloc[0])
-                    if len(values)
-                    else 0.0
-                ),
-                "end_value": (
-                    float(values.iloc[-1])
-                    if len(values)
-                    else 0.0
-                ),
+                "start_value": float(values.iloc[0]),
+                "end_value": float(values.iloc[-1]),
                 "percentage_change": 0.0,
                 "units": "",
                 "dataset_rows": len(df),
