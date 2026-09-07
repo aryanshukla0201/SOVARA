@@ -23,7 +23,7 @@ analysis_store: dict[str, dict] = {}
 def run_multimodal_analysis(
     user_query: str,
     files: list[UploadFile],
-    requested_deliverable: str = "report",
+    requested_deliverable: str | None = None,
 ) -> dict:
     """
     API adapter for the SOVARA workflow.
@@ -128,7 +128,7 @@ def run_multimodal_analysis(
 @router.post("/analyze")
 async def analyze(
     user_query: str = Form(...),
-    requested_deliverable: str = Form("report"),
+    requested_deliverable: str | None = Form(None),
     files: list[UploadFile] = File(default=[]),
 ):
     return run_multimodal_analysis(

@@ -1,50 +1,27 @@
 from __future__ import annotations
 
-import re
+import hashlib
 
+from app.services.embedding_service import EmbeddingService
+from app.services.vector_store import VectorStore
 from app.state.evidence import EvidenceRecord
 
 
 class DocumentRetriever:
-    def __init__(self, top_k: int = 5, min_score: float = 0.05):
+    def __init__(
+        self,
+        top_k: int = 5,
+        min_score: float = 0.05,
+    ):
         self.top_k = top_k
         self.min_score = min_score
+        self.vector_store = VectorStore()
 
     @staticmethod
-    def _tokenize(text: str) -> set[str]:
-        """
-        Convert text into normalized tokens.
-
-        This intentionally uses a simple deterministic tokenizer.
-        It can later be replaced with embedding-based retrieval
-        without changing DocumentNode or EvidenceRecord.
-        """
-
-        tokens = re.findall(r"\b[a-zA-Z0-9]+\b", text.lower())
-
-        return {
-            token
-            for token in tokens
-            if len(token) > 2
-        }
-
-    def _score_chunk(
-        self,
-        query_tokens: set[str],
-        chunk_tokens: set[str],
-    ) -> float:
-
-        if not query_tokens or not chunk_tokens:
-            return 0.0
-
-        overlap = query_tokens.intersection(chunk_tokens)
-
-        if not overlap:
-            return 0.0
-
-        # Fraction of meaningful query terms represented
-        # in the document chunk.
-        return len(overlap) / len(query_tokens)
+    def _content_hash(text: str) -> str:
+        return hashlib.sha256(
+            text.encode("utf-8")
+        ).hexdigest()
 
     def retrieve(
         self,
@@ -54,47 +31,125 @@ class DocumentRetriever:
         filename: str,
     ) -> list[EvidenceRecord]:
 
-        query_tokens = self._tokenize(query)
+        evidence_for_indexing: list[dict] = []
 
-        ranked_chunks: list[tuple[float, dict]] = []
+        for index, chunk in enumerate(chunks, start=1):
+            text = chunk.get("text", "").strip()
 
-        for chunk in chunks:
-            chunk_text = chunk.get("text", "")
-
-            if not chunk_text.strip():
+            if not text:
                 continue
 
-            chunk_tokens = self._tokenize(chunk_text)
-
-            score = self._score_chunk(
-                query_tokens=query_tokens,
-                chunk_tokens=chunk_tokens,
+            evidence_for_indexing.append(
+                {
+                    "evidence_id": (
+                        f"{file_id}_chunk_{index:05d}"
+                    ),
+                    "source_file_id": file_id,
+                    "source_filename": filename,
+                    "evidence_type": "document",
+                    "content": text,
+                    "content_hash": self._content_hash(text),
+                    "page_number": chunk.get("page_number"),
+                    "chunk_id": chunk.get("chunk_id"),
+                    "ocr_used": bool(
+                        chunk.get("ocr_used", False)
+                    ),
+                }
             )
 
-            if score >= self.min_score:
-                ranked_chunks.append((score, chunk))
+        if not evidence_for_indexing:
+            return []
 
-        ranked_chunks.sort(
-            key=lambda item: item[0],
-            reverse=True,
+        evidence_ids = [
+            item["evidence_id"]
+            for item in evidence_for_indexing
+        ]
+
+        existing = self.vector_store.get_existing(
+            evidence_ids
         )
 
-        top_chunks = ranked_chunks[:self.top_k]
+        items_to_embed: list[dict] = []
+
+        for item in evidence_for_indexing:
+            evidence_id = item["evidence_id"]
+            stored = existing.get(evidence_id)
+
+            if stored is None:
+                items_to_embed.append(item)
+                continue
+
+            if stored.get("content_hash") != item["content_hash"]:
+                items_to_embed.append(item)
+
+        if items_to_embed:
+
+            print(
+                f"[RETRIEVAL CACHE] embedding "
+                f"{len(items_to_embed)} new/changed chunks"
+            )
+
+            embedded = EmbeddingService.embed_evidence(
+                items_to_embed
+            )
+
+            self.vector_store.upsert_evidence(
+                embedded
+            )
+
+        else:
+            print(
+                "[RETRIEVAL CACHE] all chunks already indexed; "
+                "skipping embedding"
+            )
+
+        query_vector = EmbeddingService.embed_text(query)
+
+        if not query_vector:
+            return []
+
+        results = self.vector_store.search(
+            query_vector=query_vector,
+            limit=self.top_k,
+            source_file_id=file_id,
+        )
 
         evidence: list[EvidenceRecord] = []
 
-        for index, (score, chunk) in enumerate(top_chunks, start=1):
+        for index, item in enumerate(results, start=1):
+            score = float(
+                item.get("score", 0.0)
+            )
+
+            if score < self.min_score:
+                continue
+
+            ocr_used = bool(
+                item.get("ocr_used", False)
+            )
 
             evidence.append(
                 EvidenceRecord(
-                    evidence_id=f"{file_id}_ev_{index:03d}",
+                    evidence_id=(
+                        f"{file_id}_ev_{index:03d}"
+                    ),
                     source_file_id=file_id,
-                    source_filename=filename,
-                    page_number=chunk.get("page_number"),
-                    chunk_id=chunk.get("chunk_id"),
-                    text=chunk.get("text", ""),
-                    relevance_score=round(score, 4),
-                    retrieval_method="keyword_overlap",
+                    source_filename=(
+                        item.get("source_filename")
+                        or filename
+                    ),
+                    page_number=item.get("page_number"),
+                    chunk_id=item.get("chunk_id"),
+                    text=item.get("content", ""),
+                    relevance_score=round(
+                        score,
+                        4,
+                    ),
+                    retrieval_method=(
+                        "pdf_ocr"
+                        if ocr_used
+                        else "semantic_qdrant"
+                    ),
                 )
             )
 

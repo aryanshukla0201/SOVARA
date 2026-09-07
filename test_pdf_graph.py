@@ -8,8 +8,8 @@ state = WorkflowState(
     uploaded_files=[
         UploadedFileRecord(
             file_id="test_pdf_001",
-            original_name="Gaurav's_resume_AI_ML_research.pdf",
-            storage_path="data\Gaurav's_resume_AI_ML_research.pdf",
+            original_name="file_2b915c3f_winninng ppt inspo .pdf",
+            storage_path= "C:\\Users\\ARYAN\\OneDrive\\Desktop\\AI\\GEN-AI\\SOVARA\\data\\uploads\\file_2b915c3f_winninng ppt inspo .pdf",
             file_type="pdf",
         )
     ],

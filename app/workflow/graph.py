@@ -12,6 +12,8 @@ from app.workflow.nodes.deliverable import DeliverableNode
 from app.workflow.nodes.document_node import DocumentNode
 from app.workflow.nodes.input_processor import detect_input_modalities
 from app.workflow.nodes.policy_router import PolicyRouter
+from app.services.evidence_normalizer import EvidenceNormalizer
+from app.services.embedding_service import EmbeddingService
 from app.workflow.nodes.reasoning_node import ReasoningNode
 from app.workflow.nodes.repair import RepairNode
 from app.workflow.nodes.synthesis import SynthesisNode
@@ -270,6 +272,10 @@ class WorkflowGraph:
         return state
 
     def _aggregate_results(self, state: WorkflowState) -> WorkflowState:
+        state.retrieved_evidence = EvidenceNormalizer.normalize(
+            state.retrieved_evidence
+        )
+
         state.aggregated_results = {
             "document_results": state.document_results,
             "data_results": state.data_results,
@@ -285,6 +291,7 @@ class WorkflowGraph:
             tools_used=["result_aggregation"],
             relevant_output_ids=["aggregated_results"],
         )
+
         return state
 
     def _complexity_gate(self, state: WorkflowState) -> WorkflowState:

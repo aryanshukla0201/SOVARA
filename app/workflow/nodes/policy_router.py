@@ -17,8 +17,10 @@ class PolicyRouter:
 
         if task.requires_rag or "document_analysis" in capabilities:
             routes.append("document")
+
         if "data_analysis" in capabilities or task.requires_code:
             routes.append("data")
+
         if task.requires_vision or "vision_analysis" in capabilities:
             routes.append("vision")
 
@@ -27,6 +29,10 @@ class PolicyRouter:
         elif not routes:
             routes.append("reasoning")
 
+        if task.requires_synthesis or "report_generation" in capabilities:
+            routes.append("synthesis")
+
         deduped = list(dict.fromkeys(routes))
         state.selected_routes = deduped
+
         return state.selected_routes

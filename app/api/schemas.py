@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 class AnalysisRequest(BaseModel):
     user_query: str
-    requested_deliverable: str = "report"
+    requested_deliverable: str | None = None
 
 
 class AnalysisResponse(BaseModel):

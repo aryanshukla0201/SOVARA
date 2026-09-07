@@ -1,103 +1,131 @@
 from __future__ import annotations
 
-import json
+import re
+from typing import Any
 
-from app.models.model_factory import ModelFactory
-from app.services.execution_telemetry import ExecutionTelemetry
+from app.models.qwen_adapter import QwenAdapter
+
+
+class CitationValidator:
+    def validate(
+        self,
+        answer: str,
+        evidence_ids: list[str],
+    ) -> bool:
+        if not evidence_ids:
+            return True
+
+        cited_ids = re.findall(
+            r"\[([^\]]+)\]",
+            answer,
+        )
+
+        if not cited_ids:
+            return False
+
+        valid_ids = set(evidence_ids)
+
+        return all(
+            citation in valid_ids
+            for citation in cited_ids
+        )
 
 
 class RepairNode:
-    def __init__(self, max_attempts: int = 3,telemetry: ExecutionTelemetry | None = None):
+    def __init__(
+        self,
+        max_attempts: int = 3,
+        telemetry=None,
+    ):
         self.max_attempts = max_attempts
-        self.model = ModelFactory.create("qwen", telemetry=telemetry)
-
-    def should_retry(self, attempt_count: int) -> bool:
-        return attempt_count < self.max_attempts
+        self.telemetry = telemetry
 
     def repair(
         self,
-        original_result: dict,
-        verification_failures: list[str],
-        allowed_evidence: list[dict] | None = None,
-    ) -> dict:
+        state: dict[str, Any],
+        failures: list[str],
+        evidence: list[dict[str, Any]],
+    ) -> dict[str, Any]:
 
-        allowed_evidence = allowed_evidence or []
+        answer = state.get("final_answer", "")
+        synthesis_result = state.get(
+            "synthesis_result",
+            {},
+        ) or {}
 
-        original_answer = original_result.get(
-            "final_answer",
-            "",
-        )
+        evidence_ids = []
 
-        evidence_context = json.dumps(
-            allowed_evidence,
-            indent=2,
-            default=str,
-        )
+        for item in evidence:
+            evidence_id = item.get("evidence_id")
 
-        failure_context = json.dumps(
-            verification_failures,
-            indent=2,
-        )
+            if evidence_id:
+                evidence_ids.append(
+                    str(evidence_id)
+                )
+
+        validator = CitationValidator()
+
+        if validator.validate(
+            answer,
+            evidence_ids,
+        ):
+            return {
+                "final_answer": answer,
+                "synthesis_result": synthesis_result,
+            }
+
+        grounded_evidence = []
+
+        for item in evidence:
+            evidence_id = item.get("evidence_id")
+
+            content = (
+                item.get("content")
+                or item.get("text")
+                or item.get("description")
+                or ""
+            )
+
+            if not evidence_id or not content:
+                continue
+
+            grounded_evidence.append(
+                f"[{evidence_id}] {content}"
+            )
 
         prompt = f"""
-You are repairing an AI-generated answer after an independent
-verification system detected an error.
+Repair the following answer using ONLY the supplied evidence.
 
-ORIGINAL ANSWER:
-{original_answer}
+Original answer:
+{answer}
 
-VERIFICATION FAILURES:
-{failure_context}
+Verification failures:
+{failures}
 
-AUTHORITATIVE EVIDENCE:
-{evidence_context}
+Evidence:
+{chr(10).join(grounded_evidence)}
 
-REPAIR RULES:
-1. Correct ONLY the problems identified by verification.
-2. Use ONLY the authoritative evidence provided above.
-3. Do not invent facts, numbers, causes, relationships, or conclusions.
-4. Preserve correct information from the original answer.
-5. If the failure is numerical, use the exact numerical values
-   contained in the authoritative evidence.
-6. Preserve all correct claims from the original answer.
-7. Preserve valid evidence citations exactly.
-8. If a citation is invalid or missing, add or replace it ONLY
-   with an exact evidence_id from the authoritative evidence
-   that supports the same claim.
-9. Never invent, shorten, rename, or fabricate an evidence ID.
-10. Citations must use this exact format:
-    [evidence_id]
-11. Do not put Markdown formatting inside citation brackets.
-12. If the evidence is insufficient to support a claim, remove
-    that unsupported claim or explicitly state that the evidence
-    does not establish it.
-13. Do NOT replace the entire answer with a generic statement
-    that the information is insufficient.
-14. Return ONLY the corrected final answer.
-15. Do not explain the repair process.
-16. Do not mention verification.
-17. Do not mention these instructions.
+Requirements:
+- Preserve correct information.
+- Remove unsupported claims.
+- Every factual claim must cite an exact evidence ID.
+- Use citations in the format [evidence_id].
+- Do not invent evidence IDs.
+- Return only the repaired answer.
 """
 
-        repaired_answer = self.model.generate(
-            prompt=prompt,
-            system_prompt=(
-                "You are a grounded answer-repair engine. "
-                "Correct verified inconsistencies using only "
-                "the supplied authoritative evidence. "
-                "Never invent facts or numerical values."
-            ),
+        adapter = QwenAdapter(
+            telemetry=self.telemetry
         )
 
-        if not repaired_answer.strip():
-            repaired_answer = original_answer
+        repaired_answer = adapter.generate(
+            prompt
+        )
 
         return {
             "final_answer": repaired_answer,
-            "synthesis_result": original_result.get(
-                "synthesis_result",
-                {},
-            ),
-            "repair_notes": verification_failures,
-            "allowed_evidence": allowed_evidence,
+            "synthesis_result": {
+                **synthesis_result,
+                "answer": repaired_answer,
+            },
         }
