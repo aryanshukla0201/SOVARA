@@ -29,9 +29,6 @@ class PolicyRouter:
         elif not routes:
             routes.append("reasoning")
 
-        if task.requires_synthesis or "report_generation" in capabilities:
-            routes.append("synthesis")
-
         deduped = list(dict.fromkeys(routes))
         state.selected_routes = deduped
 

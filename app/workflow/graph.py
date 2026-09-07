@@ -112,10 +112,13 @@ class WorkflowGraph:
 
     def _document_route(self, state: WorkflowState) -> WorkflowState:
         document_node = DocumentNode(retriever=DocumentRetriever())
+        self.telemetry.record_tool("DocumentNode")
 
         for file_record in state.uploaded_files:
             if file_record.file_type not in {"pdf", "docx"}:
                 continue
+
+            self.telemetry.record_file()
 
             evidence = document_node.run(
                 file_record.storage_path,
@@ -123,6 +126,8 @@ class WorkflowGraph:
                 file_record.file_id,
                 file_record.file_type,
             )
+
+            self.telemetry.record_tool("DocumentRetriever")
 
             state.retrieved_evidence.extend(
                 [item.model_dump() for item in evidence]
@@ -149,7 +154,15 @@ class WorkflowGraph:
             state,
             node_name="document_route",
             model_used="n/a",
-            tools_used=["PyMuPDF", "DocumentRetriever"],
+            tools_used=(
+                ["PyMuPDF", "DocumentRetriever"]
+                if any(
+                    item["file_type"] == "pdf"
+                    for item in state.document_results
+                )
+                else ["DOCXParser", "DocumentRetriever"]
+            ),
+
             relevant_output_ids=[
                 item["file_id"]
                 for item in state.document_results
@@ -159,11 +172,14 @@ class WorkflowGraph:
 
     def _data_route(self, state: WorkflowState) -> WorkflowState:
         data_node = DataNode()
+        self.telemetry.record_tool("DataNode")
 
         for file_record in state.uploaded_files:
 
             if file_record.file_type not in {"csv", "xlsx"}:
                 continue
+
+            self.telemetry.record_file()
 
             if file_record.file_type == "csv":
                 with open(
@@ -182,6 +198,8 @@ class WorkflowGraph:
                 file_type=file_record.file_type,
                 user_query=state.user_query,
             )
+
+            self.telemetry.record_tool(result["tool_used"])
 
             state.data_results.append(
                 {
@@ -250,6 +268,7 @@ class WorkflowGraph:
         return state
 
     def _reasoning_route(self, state: WorkflowState) -> WorkflowState:
+        self.telemetry.record_tool("ReasoningNode")
         result = ReasoningNode(telemetry=self.telemetry).run(
             user_query=state.user_query,
             evidence=state.retrieved_evidence,
@@ -335,6 +354,8 @@ class WorkflowGraph:
         return state
 
     def _synthesis(self, state: WorkflowState) -> WorkflowState:
+        self.telemetry.record_tool("SynthesisNode")
+        
         if not state.synthesis_required:
             return state
 

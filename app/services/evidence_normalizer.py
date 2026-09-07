@@ -25,6 +25,23 @@ class EvidenceNormalizer:
             if not str(content).strip():
                 continue
 
+            evidence_type = (
+                item.get("evidence_type")
+                or item.get("type")
+            )
+
+            if not evidence_type:
+                if item.get("tool_used") == "CSVAnalyzer":
+                    evidence_type = "data"
+                elif item.get("tool_used") == "ExcelAnalyzer":
+                    evidence_type = "data"
+                elif item.get("source_file_id"):
+                    evidence_type = "document"
+                elif item.get("confidence") is not None:
+                    evidence_type = "vision"
+                else:
+                    evidence_type = "unknown"
+
             normalized.append(
                 {
                     "evidence_id": str(evidence_id),
@@ -34,11 +51,7 @@ class EvidenceNormalizer:
                         or item.get("filename")
                         or item.get("source_file")
                     ),
-                    "evidence_type": (
-                        item.get("evidence_type")
-                        or item.get("type")
-                        or "unknown"
-                    ),
+                    "evidence_type": str(evidence_type),
                     "content": str(content).strip(),
                     "confidence": item.get("confidence"),
                     "page_number": item.get("page_number"),

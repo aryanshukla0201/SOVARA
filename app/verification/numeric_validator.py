@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import numbers
 import re
 from typing import Any
+from unittest import result
 
 
 class NumericValidator:
@@ -62,34 +64,52 @@ class NumericValidator:
                 "reason": "data result is not structured numeric output",
             }
 
-        if result.get("analysis_type") != "trend_analysis":
+        analysis_type = result.get("analysis_type")
+
+        expected_fields = {
+            "trend_analysis": [
+                "start_value",
+                "end_value",
+                "percentage_change",
+            ],
+            "average": ["average"],
+            "sum": ["sum"],
+            "minimum": ["minimum"],
+            "maximum": ["maximum"],
+        }
+
+        fields = expected_fields.get(analysis_type)
+
+        if not fields:
             return {
                 "valid": True,
                 "checked": False,
-                "reason": "numeric validation not implemented for this analysis type",
+                "reason": f"numeric validation not implemented for {analysis_type}",
             }
 
         expected_values = {
-            "start_value": result.get("start_value"),
-            "end_value": result.get("end_value"),
-            "percentage_change": result.get("percentage_change"),
+            field: result.get(field)
+            for field in fields
         }
 
         numbers = self.extract_numbers(answer)
 
-        if len(numbers) < 3:
+        if not numbers:
             return {
-                "valid": False,
-                "checked": True,
-                "reason": "could not find enough numeric claims in answer",
+                "valid": True,
+                "checked": False,
+                "reason": "answer makes no numeric claims about this data result",
                 "expected": expected_values,
-                "reported_numbers": numbers,
+                "reported_numbers": [],
             }
 
         def contains_expected_value(
             expected: float,
             reported_numbers: list[float],
         ) -> bool:
+            if expected is None:
+                return True
+
             return any(
                 self.validate_reported_value(
                     expected,
@@ -99,20 +119,12 @@ class NumericValidator:
                 for actual in reported_numbers
             )
 
-
         checks = {
-            "start_value": contains_expected_value(
-                expected_values["start_value"],
+            field: contains_expected_value(
+                expected_values[field],
                 numbers,
-            ),
-            "end_value": contains_expected_value(
-                expected_values["end_value"],
-                numbers,
-            ),
-            "percentage_change": contains_expected_value(
-                expected_values["percentage_change"],
-                numbers,
-            ),
+            )
+            for field in fields
         }
 
         return {
