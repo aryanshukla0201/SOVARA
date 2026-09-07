@@ -7,8 +7,14 @@ from app.services.execution_telemetry import ExecutionTelemetry
 
 
 class ReasoningNode:
-    def __init__(self,telemetry: ExecutionTelemetry | None = None):
-        self.model = ModelFactory.create("qwen", telemetry=telemetry)
+    def __init__(
+        self,
+        telemetry: ExecutionTelemetry | None = None,
+    ):
+        self.model = ModelFactory.create(
+            "qwen",
+            telemetry=telemetry,
+        )
 
     def run(
         self,
@@ -24,117 +30,87 @@ class ReasoningNode:
 
         context_parts = []
 
-        # -------------------------------------------------
-        # DOCUMENT EVIDENCE
-        # -------------------------------------------------
-        if evidence:
+        for item in evidence:
+            if not isinstance(item, dict):
+                continue
 
-            document_context = []
+            evidence_id = item.get("evidence_id")
+            if not evidence_id:
+                continue
 
-            for item in evidence[:3]:
+            content = item.get(
+                "content",
+                item.get("text", ""),
+            )
 
-                text = item.get("text", "").strip()
-                evidence_id = item.get("evidence_id", "")
-                source_filename = item.get("source_filename", "")
-                page_number = item.get("page_number", "")
+            if not content:
+                continue
 
-                if not text:
-                    continue
-
-                text = text[:1500]
-
-                document_context.append(
-                    f"""
-SOURCE: {source_filename}
-PAGE: {page_number}
+            context_parts.append(
+                f"""
 EVIDENCE ID: {evidence_id}
+TYPE: {item.get("evidence_type", "document")}
+SOURCE: {item.get("source_filename", "")}
+PAGE: {item.get("page_number", "")}
 
 CONTENT:
-{text}
+{content}
 """
-                )
+            )
 
-            if document_context:
+        for item in data_results:
+            if not isinstance(item, dict):
+                continue
 
-                context_parts.append(
-                    "DOCUMENT EVIDENCE:\n"
-                    + "\n\n".join(document_context)
-                )
+            evidence_id = item.get("evidence_id")
 
-        # -------------------------------------------------
-        # DATA EVIDENCE
-        # -------------------------------------------------
-        if data_results:
+            if not evidence_id:
+                continue
 
-            data_context = []
-
-            for item in data_results:
-
-                if not isinstance(item, dict):
-                    continue
-
-                evidence_id = item.get("evidence_id", "")
-                tool_used = item.get("tool_used", "")
-                file_type = item.get("file_type", "")
-                result = item.get("result", {})
-
-                data_context.append(
-                    f"""
-DATA EVIDENCE ID: {evidence_id}
-TOOL: {tool_used}
-FILE TYPE: {file_type}
+            context_parts.append(
+                f"""
+EVIDENCE ID: {evidence_id}
+TYPE: data_result
 
 RESULT:
-{json.dumps(result, indent=2, default=str)}
+{json.dumps(item.get("result", item), indent=2, default=str)}
 """
-                )
+            )
 
-            if data_context:
+        for item in vision_results:
+            if not isinstance(item, dict):
+                continue
+
+            file_id = item.get("file_id", "")
+            result = item.get("result", {})
+
+            observations = (
+                result.get("observations", [])
+                if isinstance(result, dict)
+                else []
+            )
+
+            for index, observation in enumerate(
+                observations,
+                start=1,
+            ):
+                evidence_id = f"{file_id}_ev_{index:03d}"
 
                 context_parts.append(
-                    "DATA ANALYSIS RESULTS:\n"
-                    + "\n\n".join(data_context)
-                )
-
-        # -------------------------------------------------
-        # VISION RESULTS
-        # -------------------------------------------------
-        if vision_results:
-
-            vision_context = []
-
-            for item in vision_results:
-
-                if not isinstance(item, dict):
-                    continue
-
-                evidence_id = item.get("evidence_id", "")
-                result = item.get("result", item)
-
-                vision_context.append(
                     f"""
-VISION EVIDENCE ID: {evidence_id}
+EVIDENCE ID: {evidence_id}
+TYPE: vision
+SOURCE: {item.get("source_file", "")}
 
-RESULT:
-{json.dumps(result, indent=2, default=str)}
+CONTENT:
+{observation.get("description", "")}
 """
                 )
 
-            if vision_context:
-
-                context_parts.append(
-                    "VISION ANALYSIS RESULTS:\n"
-                    + "\n\n".join(vision_context)
-                )
-
-        # -------------------------------------------------
-        # NO CONTEXT AVAILABLE
-        # -------------------------------------------------
         if not context_parts:
-
             answer = (
-                "The available execution results did not contain "
-                "enough information to produce a detailed analysis."
+                "The available evidence does not contain enough "
+                "information to answer the request."
             )
 
             return {
@@ -147,132 +123,66 @@ RESULT:
                 "model_used": None,
             }
 
-        # -------------------------------------------------
-        # BUILD CONTEXT
-        # -------------------------------------------------
         context = "\n\n".join(context_parts)
 
-        # -------------------------------------------------
-        # LLM PROMPT
-        # -------------------------------------------------
         prompt = f"""
 USER REQUEST:
 {user_query}
 
-AVAILABLE EXECUTION RESULTS:
+AUTHORITATIVE EXECUTION EVIDENCE:
 
 {context}
 
 TASK:
 
-Answer the user's request using ONLY the information provided in
-the execution results above.
+Produce a concise answer to the user's request.
 
-GROUNDING AND CITATION RULES:
+STRICT RULES:
 
-1. Do not invent facts, numbers, explanations, causes, trends,
-   relationships, or conclusions.
+1. Use ONLY the supplied evidence.
 
-2. Every claim based on DOCUMENT EVIDENCE must include the exact
-   document evidence ID that supports the claim.
+2. Every factual claim MUST contain an exact evidence citation.
 
-3. Every claim based on DATA ANALYSIS RESULTS must include the exact
-   DATA EVIDENCE ID that supports the claim.
+3. Citation format:
+[evidence_id]
 
-4. Every claim based on VISION ANALYSIS RESULTS must include the exact
-   VISION EVIDENCE ID that supports the claim.
+4. Only use evidence IDs explicitly supplied above.
 
-5. Citations MUST use this exact format:
+5. Never invent or modify evidence IDs.
 
-   [evidence_id]
+6. Never output JSON.
 
-6. Valid examples:
+7. Never output dictionaries.
 
-   The document describes an automated subsidy recommendation system
-   [file_12345678_ev_001].
+8. Never output internal execution state.
 
-   Revenue increased from 100 to 180, representing an 80% increase
-   [data_12345678].
+9. Do not claim causation unless explicitly supported.
 
-7. Invalid citation formats:
+10. Preserve numerical values exactly.
 
-   [**file_12345678_ev_001**]
-   (file_12345678_ev_001)
-   file_12345678_ev_001
-   [file_12345678_ev_001, file_12345678_ev_002]
+11. Clearly distinguish observations from interpretations.
 
-8. Never put Markdown formatting inside citation brackets.
+12. If evidence is insufficient, state that clearly.
 
-9. Never modify, shorten, rename, or invent an evidence ID.
+13. Return ONLY the human-readable answer.
 
-10. Only cite evidence IDs that actually appear in the execution
-    results above.
-
-11. If multiple evidence items support the same claim, cite them
-    separately:
-
-    [evidence_id_1] [evidence_id_2]
-
-12. Do NOT use a DOCUMENT evidence ID to support a DATA claim.
-
-13. Do NOT use a DATA evidence ID to support a DOCUMENT claim.
-
-14. Do NOT infer causation between different sources unless the
-    provided evidence explicitly establishes that relationship.
-
-15. Preserve deterministic numerical results exactly.
-
-16. If the data result says:
-    start = 100
-    end = 180
-    percentage_change = 80
-
-    you may state:
-
-    Revenue increased from 100 to 180, representing an 80% increase
-    [data_12345678].
-
-17. Do NOT introduce additional numerical claims that are not present
-    in the data analysis results.
-
-18. If the available evidence is insufficient to answer part of the
-    request, explicitly state that it is insufficient.
-
-19. Clearly distinguish observations from conclusions.
-
-20. Organize the answer with headings or bullet points when useful.
-
-IMPORTANT:
-
-The answer will be automatically checked by a strict verification
-system. Citation syntax must be exact.
-
-Return ONLY the final answer for the user.
+Before returning, verify every citation against the supplied evidence IDs.
 """
 
-        # -------------------------------------------------
-        # MODEL REASONING
-        # -------------------------------------------------
         answer = self.model.generate(
-            prompt=prompt,
+            prompt,
             system_prompt=(
-                "You are a careful AI reasoning engine. "
-                "Use only grounded execution results. "
-                "Preserve exact evidence citations. "
-                "Never invent facts or relationships. "
-                "Preserve deterministic numerical results. "
-                "Clearly distinguish observations, conclusions, and limitations."
+                "You are SOVARA's grounded reasoning engine. "
+                "Every factual claim must have an exact evidence citation. "
+                "Return only human-readable text. "
+                "Never output JSON or internal state."
             ),
         )
 
-        # -------------------------------------------------
-        # FALLBACK
-        # -------------------------------------------------
         if not answer.strip():
-
             answer = (
                 "The reasoning model did not return a response. "
-                "Please review the available execution results."
+                "Please review the available evidence."
             )
 
         return {

@@ -1,12 +1,21 @@
 from __future__ import annotations
 
+import json
+
 from app.models.model_factory import ModelFactory
 from app.services.execution_telemetry import ExecutionTelemetry
 
 
 class SynthesisNode:
-    def __init__(self, model=None,telemetry: ExecutionTelemetry | None = None):
-        self.model = model or ModelFactory.create("qwen", telemetry=telemetry)
+    def __init__(
+        self,
+        model=None,
+        telemetry: ExecutionTelemetry | None = None,
+    ):
+        self.model = model or ModelFactory.create(
+            "qwen",
+            telemetry=telemetry,
+        )
 
     def run(
         self,
@@ -16,118 +25,164 @@ class SynthesisNode:
         vision_results: list[dict],
     ) -> dict:
 
+        grounded_evidence = []
+
+        for item in evidence:
+            if not isinstance(item, dict):
+                continue
+
+            evidence_id = item.get("evidence_id")
+
+            if not evidence_id:
+                continue
+
+            grounded_evidence.append({
+                "evidence_id": evidence_id,
+                "source_filename": item.get("source_filename", ""),
+                "page_number": item.get("page_number"),
+                "evidence_type": item.get("evidence_type", "document"),
+                "content": item.get(
+                    "content",
+                    item.get("text", ""),
+                ),
+            })
+
+        for item in data_results:
+            if not isinstance(item, dict):
+                continue
+
+            evidence_id = item.get("evidence_id")
+
+            if evidence_id:
+                grounded_evidence.append({
+                    "evidence_id": evidence_id,
+                    "evidence_type": "data_result",
+                    "content": json.dumps(
+                        item.get("result", item),
+                        default=str,
+                    ),
+                })
+
+        for item in vision_results:
+            if not isinstance(item, dict):
+                continue
+
+            file_id = item.get("file_id", "")
+
+            result = item.get("result", {})
+
+            observations = (
+                result.get("observations", [])
+                if isinstance(result, dict)
+                else []
+            )
+
+            for index, observation in enumerate(
+                observations,
+                start=1,
+            ):
+                evidence_id = f"{file_id}_ev_{index:03d}"
+
+                grounded_evidence.append({
+                    "evidence_id": evidence_id,
+                    "evidence_type": "vision",
+                    "source_filename": item.get(
+                        "source_file",
+                        "",
+                    ),
+                    "content": observation.get(
+                        "description",
+                        "",
+                    ),
+                    "confidence": observation.get(
+                        "confidence",
+                    ),
+                })
+
+        evidence_context = json.dumps(
+            grounded_evidence,
+            indent=2,
+            default=str,
+        )
+
         prompt = f"""
-You are the synthesis stage of a grounded AI analysis system.
+You are the final answer generation stage of SOVARA.
 
 USER REQUEST:
 {user_query}
 
-DOCUMENT EVIDENCE:
-{evidence}
+AUTHORITATIVE EVIDENCE:
+{evidence_context}
 
-DATA ANALYSIS RESULTS:
-{data_results}
+RULES:
 
-VISION ANALYSIS RESULTS:
-{vision_results}
+1. Answer ONLY using the authoritative evidence above.
 
-SYNTHESIS RULES:
+2. Every factual claim MUST have at least one citation.
 
-1. Use ONLY the information contained in the provided evidence and
-   tool results.
+3. Citations MUST use an exact evidence_id from the evidence.
 
-2. Do NOT invent facts, explanations, causes, trends, or relationships.
+4. Citation format MUST be exactly:
+[evidence_id]
 
-3. Clearly distinguish:
-   - VERIFIED OBSERVATIONS directly supported by the sources
-   - INFERENCES or POTENTIAL IMPLICATIONS reasonably derived by
-     connecting those observations
-   - LIMITATIONS where the available evidence cannot establish a claim
+5. Example:
+The document describes market linkage between farmers and buyers [file_123_ev_001].
 
-4. PRESERVE DOCUMENT CITATIONS.
+6. NEVER write a citation without square brackets.
 
-   Every claim that depends on document evidence MUST include the
-   exact corresponding evidence ID in square brackets.
+7. NEVER modify an evidence_id.
 
-   Valid format:
-   [file_45aa400e_ev_001]
+8. NEVER invent an evidence_id.
 
-   IMPORTANT:
-   - Use the exact evidence ID provided.
-   - Do NOT modify the evidence ID.
-   - Do NOT put Markdown formatting inside the brackets.
-   - Do NOT invent evidence IDs.
-   - Do NOT write citations such as [**file_45aa400e_ev_001**].
-   - Do NOT remove citations from the final answer.
+9. NEVER use Markdown inside citation brackets.
 
-5. DATA RESULTS:
+10. Multiple citations must be separate:
+[file_123_ev_001] [file_123_ev_002]
 
-   Preserve deterministic numerical results exactly.
+11. Do NOT output JSON.
 
-   If the data results say:
-   start = 100
-   end = 180
-   percentage_change = 80
+12. Do NOT output Python dictionaries.
 
-   you may state:
-   "Revenue increased from 100 to 180, an 80% increase."
+13. Do NOT output internal execution state.
 
-   Do NOT introduce additional claims that are not supported by the
-   supplied data.
+14. Do NOT output evidence lists.
 
-6. CROSS-MODAL REASONING:
+15. Do NOT explain the verification process.
 
-   You MAY derive reasonable implications by connecting observations
-   from different sources, but you MUST clearly label them as
-   interpretations or potential contributions.
+16. Return ONLY a clean human-readable final answer.
 
-   For example:
+17. If the evidence cannot establish a claim, explicitly state that
+the evidence does not establish it.
 
-   - VERIFIED OBSERVATION:
-     Revenue increased from 100 to 180 [data_xxx].
+18. Do not make unsupported causal claims.
 
-   - DOCUMENT OBSERVATION:
-     The proposed solution includes buyer linkages and profit
-     simulation [file_xxx].
+19. Preserve exact numerical values from evidence.
 
-   - REASONED IMPLICATION:
-     These features could contribute to revenue growth by improving
-     market access and crop-level decision making.
+20. Every paragraph containing factual information must contain
+at least one valid citation.
 
-   Do NOT present such an implication as an established fact.
+Before returning the answer, internally verify that every citation
+exactly matches one of the supplied evidence_id values.
 
-   NEVER claim:
-   "The presentation features caused the revenue increase."
-
-   unless the supplied evidence explicitly establishes that causal
-   relationship.
-
-7. If the available sources cannot establish a conclusion, explicitly
-   say so.
-
-8. Organize the response clearly using headings or bullet points when
-   useful.
-
-9. Return ONLY the final synthesized answer.
+Return ONLY the final answer.
 """
 
         result = self.model.generate(
             prompt,
             system_prompt=(
-                "You are a rigorous evidence-grounded synthesis engine. "
-                "Preserve exact evidence citations. "
-                "Never invent facts or relationships. "
-                "Preserve deterministic numerical results. "
-                "Clearly distinguish observations, conclusions, and limitations."
+                "You are SOVARA's final grounded answer generator. "
+                "Return only a clean human-readable answer. "
+                "Every factual claim requires an exact evidence citation. "
+                "Never output JSON or internal state. "
+                "Never invent evidence IDs."
             ),
         )
 
         return {
             "answer": result,
             "evidence_references": [
-                item.get("evidence_id")
-                for item in evidence
-                if isinstance(item, dict) and item.get("evidence_id")
+                item["evidence_id"]
+                for item in grounded_evidence
             ],
             "confidence": 0.85,
         }
