@@ -20,6 +20,7 @@ from app.workflow.nodes.task_analyzer import TaskAnalyzer
 from app.workflow.nodes.vision_node import VisionNode
 from app.workflow.nodes.verifier import Verifier
 from app.services.execution_telemetry import ExecutionTelemetry
+from app.services.knowledge_vault import KnowledgeVault
 
 
 class WorkflowGraph:
@@ -29,6 +30,11 @@ class WorkflowGraph:
 
         # Request execution telemetry
         self.telemetry = ExecutionTelemetry()
+
+        self.retriever = DocumentRetriever()
+        self.knowledge_vault = KnowledgeVault(
+            retriever=self.retriever
+        )
 
     def _trace(
         self,
@@ -109,9 +115,25 @@ class WorkflowGraph:
         )
 
         return state
+    def _vault_route(self, state: WorkflowState) -> WorkflowState:
+        evidence = self.knowledge_vault.search(
+            query=state.user_query,
+            top_k=5,
+        )
 
+        state.retrieved_evidence = [
+            item.model_dump() if hasattr(item, "model_dump") else item
+            for item in evidence
+        ]
+           
+        self.telemetry.record_tool("KnowledgeVault")
+        return state
+    
     def _document_route(self, state: WorkflowState) -> WorkflowState:
-        document_node = DocumentNode(retriever=DocumentRetriever())
+        document_node = DocumentNode(
+            retriever=self.knowledge_vault.retriever
+        )
+
         self.telemetry.record_tool("DocumentNode")
 
         for file_record in state.uploaded_files:
@@ -150,24 +172,6 @@ class WorkflowGraph:
                 "evidence_count": len(evidence),
             })
 
-            self._trace(
-            state,
-            node_name="document_route",
-            model_used="n/a",
-            tools_used=(
-                ["PyMuPDF", "DocumentRetriever"]
-                if any(
-                    item["file_type"] == "pdf"
-                    for item in state.document_results
-                )
-                else ["DOCXParser", "DocumentRetriever"]
-            ),
-
-            relevant_output_ids=[
-                item["file_id"]
-                for item in state.document_results
-            ],
-        )
         return state
 
     def _data_route(self, state: WorkflowState) -> WorkflowState:
@@ -708,6 +712,7 @@ class WorkflowGraph:
         self.graph.add_node("policy_router", self._policy_router)
         self.graph.add_node("execution_dispatch", self._execution_dispatch)
         self.graph.add_node("document_route", self._document_route)
+        self.graph.add_node("vault_route", self._vault_route)
         self.graph.add_node("data_route", self._data_route)
         self.graph.add_node("vision_route", self._vision_route)
         self.graph.add_node("reasoning_route", self._reasoning_route)
@@ -732,6 +737,7 @@ class WorkflowGraph:
             lambda state: state.current_route if state.current_route else "aggregate_results",
             {
                 "document": "document_route",
+                "vault": "vault_route",
                 "data": "data_route",
                 "vision": "vision_route",
                 "reasoning": "reasoning_route",
@@ -742,6 +748,7 @@ class WorkflowGraph:
         self.graph.add_edge("data_route", "execution_dispatch")
         self.graph.add_edge("vision_route", "execution_dispatch")
         self.graph.add_edge("reasoning_route", "execution_dispatch")
+        self.graph.add_edge("vault_route", "execution_dispatch")
         self.graph.add_edge("aggregate_results", "complexity_gate")
         self.graph.add_conditional_edges(
             "complexity_gate",

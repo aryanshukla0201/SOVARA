@@ -16,6 +16,10 @@ class ContextManager:
     def count_tokens(self, text: str) -> int:
         return len(self.encoder.encode(text))
 
+    def _reserve_query(self, user_query: str) -> tuple[str, int]:
+        query_block = f"USER REQUEST:\n{user_query}"
+        return query_block, self.count_tokens(query_block)
+
     def build_prompt_context(
         self,
         user_query: str,
@@ -25,10 +29,15 @@ class ContextManager:
         history = conversation_history or []
         evidence = evidence or []
 
-        sections: list[str] = []
-        used_tokens = 0
+        query_block, query_tokens = self._reserve_query(user_query)
 
-        # Recent conversation first
+        if query_tokens >= self.max_context_tokens:
+            return query_block
+
+        sections: list[str] = []
+        used_tokens = query_tokens
+        available_tokens = self.max_context_tokens - query_tokens
+
         for message in reversed(history):
             role = message.get("role", "user")
             content = str(message.get("content", "")).strip()
@@ -45,7 +54,6 @@ class ContextManager:
             sections.insert(0, block)
             used_tokens += tokens
 
-        # Evidence
         evidence_blocks: list[str] = []
 
         for item in evidence[:self.max_evidence_items]:
@@ -56,10 +64,7 @@ class ContextManager:
             if not evidence_id:
                 continue
 
-            content = item.get(
-                "content",
-                item.get("text", ""),
-            )
+            content = item.get("content", item.get("text", ""))
 
             if not content:
                 continue
@@ -86,9 +91,7 @@ class ContextManager:
                 + "\n\n".join(evidence_blocks)
             )
 
-        sections.append(
-            f"USER REQUEST:\n{user_query}"
-        )
+        sections.append(query_block)
 
         return "\n\n".join(sections)
 
@@ -100,8 +103,13 @@ class ContextManager:
     ) -> str:
         history = conversation_history or []
 
+        query_block, query_tokens = self._reserve_query(user_query)
+
+        if query_tokens >= self.max_context_tokens:
+            return query_block
+
         sections: list[str] = []
-        used_tokens = 0
+        used_tokens = query_tokens
 
         for message in reversed(history):
             role = message.get("role", "user")
@@ -128,7 +136,7 @@ class ContextManager:
             sections.append(block)
             used_tokens += tokens
 
-        sections.append(f"USER REQUEST:\n{user_query}")
+        sections.append(query_block)
 
         return "\n\n".join(sections)
 

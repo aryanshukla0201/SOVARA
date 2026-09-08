@@ -8,6 +8,7 @@ from qdrant_client.models import (
     Distance,
     FieldCondition,
     Filter,
+    FilterSelector,
     MatchValue,
     PointStruct,
     VectorParams,
@@ -15,11 +16,15 @@ from qdrant_client.models import (
 
 
 class VectorStore:
+    _client = None
     COLLECTION_NAME = "sovara_evidence"
     VECTOR_SIZE = 384
 
     def __init__(self, path: str = "data/qdrant"):
-        self.client = QdrantClient(path=path)
+        if VectorStore._client is None:
+            VectorStore._client = QdrantClient(path=path)
+
+        self.client = VectorStore._client
         self._ensure_collection()
 
     def _ensure_collection(self) -> None:
@@ -110,10 +115,10 @@ class VectorStore:
 
     def search(
         self,
-        query_vector: list[float],
-        limit: int = 5,
-        source_file_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+        query_vector,
+        limit=5,
+        source_file_id=None,
+    ):
         query_filter = None
 
         if source_file_id:
@@ -121,9 +126,7 @@ class VectorStore:
                 must=[
                     FieldCondition(
                         key="source_file_id",
-                        match=MatchValue(
-                            value=source_file_id
-                        ),
+                        match=MatchValue(value=source_file_id),
                     )
                 ]
             )
@@ -142,3 +145,17 @@ class VectorStore:
             }
             for result in results.points
         ]
+    def delete_by_source_file_id(self, source_file_id: str) -> None:
+        self.client.delete(
+            collection_name=self.COLLECTION_NAME,
+            points_selector=FilterSelector(
+                filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="source_file_id",
+                            match=MatchValue(value=source_file_id),
+                        )
+                    ]
+                )
+            ),
+        )

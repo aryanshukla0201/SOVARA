@@ -107,7 +107,11 @@ class DocumentRetriever:
                 "skipping embedding"
             )
 
-        query_vector = EmbeddingService.embed_text(query)
+        query_vector = (
+            EmbeddingService.embed_text(query)
+            if query and query.strip()
+            else None
+        )
 
         if not query_vector:
             return []

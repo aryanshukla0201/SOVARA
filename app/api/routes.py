@@ -10,6 +10,7 @@ from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.state.workflow_state import WorkflowState
 from app.services.conversation_service import ConversationService
+from app.services.knowledge_vault import KnowledgeVault
 from app.workflow.graph import WorkflowGraph
 from app.workflow.nodes.input_processor import (
     detect_input_modalities,
@@ -20,7 +21,7 @@ router = APIRouter()
 logger = get_logger("api.routes")
 analysis_store: dict[str, dict] = {}
 conversation_service = ConversationService()
-
+knowledge_vault = KnowledgeVault()
 
 def run_multimodal_analysis(
     user_query: str,
@@ -212,3 +213,128 @@ async def download_file(
         )
 
     return FileResponse(path=path)
+
+@router.post("/vault/upload")
+async def upload_to_vault(
+    file: UploadFile = File(...),
+):
+    if not file.filename:
+        raise HTTPException(
+            status_code=400,
+            detail="Filename is required",
+        )
+
+    filename = Path(file.filename).name
+    extension = Path(filename).suffix.lower()
+
+    if extension not in {".pdf", ".docx"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF and DOCX files are supported",
+        )
+
+    upload_dir = Path.cwd() / "data" / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    temporary_path = upload_dir / filename
+
+    contents = await file.read()
+    temporary_path.write_bytes(contents)
+
+    file_type = extension.lstrip(".")
+
+    try:
+        result = knowledge_vault.add_document(
+            file_path=temporary_path,
+            file_type=file_type,
+        )
+    except Exception as exc:
+        logger.exception("Vault ingestion failed")
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc),
+        ) from exc
+
+    return result
+
+@router.get("/vault/documents")
+async def list_vault_documents():
+    return {
+        "documents": knowledge_vault.list_documents()
+    }
+
+@router.get("/vault/documents/{document_id}")
+async def get_vault_document(document_id: str):
+    document = knowledge_vault.get_document(document_id)
+
+    if document is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Vault document not found",
+        )
+
+    return document
+
+@router.delete("/vault/documents/{document_id}")
+async def delete_vault_document(document_id: str):
+    deleted = knowledge_vault.delete_document(document_id)
+
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Vault document not found",
+        )
+
+    return {
+        "document_id": document_id,
+        "deleted": True,
+    }
+
+@router.post("/vault/documents/{document_id}/reindex")
+async def reindex_vault_document(document_id: str):
+    try:
+        return knowledge_vault.reindex_document(document_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        logger.exception("Vault re-indexing failed")
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc),
+        ) from exc
+
+@router.get("/vault/search")
+async def search_vault(
+    query: str,
+    top_k: int = 5,
+):
+    if not query.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Query is required",
+        )
+
+    results = knowledge_vault.search(
+        query=query,
+        top_k=top_k,
+    )
+
+    return {
+        "query": query,
+        "results": [
+            {
+                "evidence_id": item.evidence_id,
+                "source_file_id": item.source_file_id,
+                "source_filename": item.source_filename,
+                "page_number": item.page_number,
+                "chunk_id": item.chunk_id,
+                "text": item.text,
+                "relevance_score": item.relevance_score,
+                "retrieval_method": item.retrieval_method,
+            }
+            for item in results
+        ],
+    }

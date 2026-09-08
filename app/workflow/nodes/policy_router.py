@@ -9,14 +9,17 @@ class PolicyRouter:
         task = state.task_state
 
         if task is None:
-            routes = ["reasoning"]
+            routes = ["vault", "reasoning"]
             state.selected_routes = list(dict.fromkeys(routes))
             return state.selected_routes
 
         capabilities = set(task.required_capabilities)
 
         if task.requires_rag or "document_analysis" in capabilities:
-            routes.append("document")
+            if state.uploaded_files:
+                routes.append("document")
+            else:
+                routes.append("vault")
 
         if "data_analysis" in capabilities or task.requires_code:
             routes.append("data")
@@ -29,7 +32,9 @@ class PolicyRouter:
         elif not routes:
             routes.append("reasoning")
 
+        if not state.uploaded_files and "vault" not in routes:
+            routes.insert(0, "vault")
+
         deduped = list(dict.fromkeys(routes))
         state.selected_routes = deduped
-
         return state.selected_routes
