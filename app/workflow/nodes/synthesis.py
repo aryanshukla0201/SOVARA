@@ -4,6 +4,7 @@ import json
 
 from app.models.model_factory import ModelFactory
 from app.services.execution_telemetry import ExecutionTelemetry
+from app.services.context_manager import ContextManager
 
 
 class SynthesisNode:
@@ -12,6 +13,9 @@ class SynthesisNode:
         model=None,
         telemetry: ExecutionTelemetry | None = None,
     ):
+        self.telemetry = telemetry
+        self.context_manager = ContextManager()
+
         self.model = model or ModelFactory.create(
             "qwen",
             telemetry=telemetry,
@@ -23,6 +27,7 @@ class SynthesisNode:
         evidence: list[dict],
         data_results: list[dict],
         vision_results: list[dict],
+        conversation_history: list[dict] | None = None,
     ) -> dict:
 
         grounded_evidence = []
@@ -105,14 +110,17 @@ class SynthesisNode:
             default=str,
         )
 
+        conversation_context = self.context_manager.build_prompt_from_blocks(
+            user_query=user_query,
+            context_blocks=[f"AUTHORITATIVE EVIDENCE:\n{evidence_context}"],
+            conversation_history=conversation_history,
+        )
+
         prompt = f"""
 You are the final answer generation stage of SOVARA.
 
-USER REQUEST:
-{user_query}
-
-AUTHORITATIVE EVIDENCE:
-{evidence_context}
+CONVERSATION CONTEXT:
+{conversation_context}
 
 RULES:
 

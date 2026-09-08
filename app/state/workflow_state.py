@@ -19,6 +19,9 @@ class WorkflowState(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     request_id: str
+    conversation_id: str = ""
+    conversation_history: list[dict] = Field(default_factory=list)
+    context_messages: list[dict] = Field(default_factory=list)
     user_query: str = ""
     input_metadata: dict = Field(default_factory=dict)
     input_types: dict[str, bool] | list[str] = Field(default_factory=dict)

@@ -274,6 +274,7 @@ class WorkflowGraph:
             evidence=state.retrieved_evidence,
             data_results=state.data_results,
             vision_results=state.vision_results,
+            conversation_history=state.conversation_history,
         )
 
         state.reasoning_results.append(result)
@@ -355,7 +356,7 @@ class WorkflowGraph:
 
     def _synthesis(self, state: WorkflowState) -> WorkflowState:
         self.telemetry.record_tool("SynthesisNode")
-        
+
         if not state.synthesis_required:
             return state
 
@@ -364,6 +365,7 @@ class WorkflowGraph:
             state.retrieved_evidence,
             state.data_results,
             state.vision_results,
+            state.conversation_history,
         )
 
         state.synthesis_result = result

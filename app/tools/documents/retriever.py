@@ -49,6 +49,7 @@ class DocumentRetriever:
                     "evidence_type": "document",
                     "content": text,
                     "content_hash": self._content_hash(text),
+                    "embedding_model": EmbeddingService.MODEL_NAME,
                     "page_number": chunk.get("page_number"),
                     "chunk_id": chunk.get("chunk_id"),
                     "ocr_used": bool(
@@ -79,7 +80,10 @@ class DocumentRetriever:
                 items_to_embed.append(item)
                 continue
 
-            if stored.get("content_hash") != item["content_hash"]:
+            if (
+                stored.get("content_hash") != item["content_hash"]
+                or stored.get("embedding_model") != item["embedding_model"]
+            ):
                 items_to_embed.append(item)
 
         if items_to_embed:

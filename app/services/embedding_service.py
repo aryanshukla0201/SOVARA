@@ -6,7 +6,7 @@ from sentence_transformers import SentenceTransformer
 class EmbeddingService:
     _model = None
 
-    MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+    MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
     @classmethod
     def _get_model(cls) -> SentenceTransformer:

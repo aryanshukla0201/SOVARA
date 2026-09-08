@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.state.workflow_state import WorkflowState
+from app.services.conversation_service import ConversationService
 from app.workflow.graph import WorkflowGraph
 from app.workflow.nodes.input_processor import (
     detect_input_modalities,
@@ -18,12 +19,14 @@ from app.workflow.nodes.input_processor import (
 router = APIRouter()
 logger = get_logger("api.routes")
 analysis_store: dict[str, dict] = {}
+conversation_service = ConversationService()
 
 
 def run_multimodal_analysis(
     user_query: str,
     files: list[UploadFile],
     requested_deliverable: str | None = None,
+    conversation_id: str | None = None,
 ) -> dict:
     """
     API adapter for the SOVARA workflow.
@@ -70,10 +73,24 @@ def run_multimodal_analysis(
         saved_paths,
     )
 
+    if conversation_id is None:
+        conversation_id = conversation_service.create_conversation()
+    elif not conversation_service.exists(conversation_id):
+        raise HTTPException(
+            status_code=404,
+            detail="Conversation not found",
+        )
+
+    conversation_history = conversation_service.get_history(
+        conversation_id
+    )
+
     state = WorkflowState(
         request_id=request_id,
-        user_query=user_query,
+        conversation_id=conversation_id,
+        conversation_history=conversation_history,
         input_types=input_types,
+        user_query=user_query,
         requested_deliverable=requested_deliverable,
     )
 
@@ -100,12 +117,27 @@ def run_multimodal_analysis(
     else:
         result = WorkflowState.model_validate(final_state)
 
+
+    conversation_service.add_message(
+        result.conversation_id,
+        "user",
+        user_query,
+    )
+
+    if result.final_answer:
+        conversation_service.add_message(
+            result.conversation_id,
+            "assistant",
+            result.final_answer,
+        )
+
     # ---------------------------------------------------------
     # API RESPONSE
     # ---------------------------------------------------------
 
     response = {
             "request_id": result.request_id,
+            "conversation_id": result.conversation_id,
             "status": "completed",
             "final_answer": result.final_answer,
             "evidence": [
@@ -128,6 +160,7 @@ def run_multimodal_analysis(
 @router.post("/analyze")
 async def analyze(
     user_query: str = Form(...),
+    conversation_id: str | None = Form(None),
     requested_deliverable: str | None = Form(None),
     files: list[UploadFile] = File(default=[]),
 ):
@@ -135,6 +168,7 @@ async def analyze(
         user_query=user_query,
         files=files,
         requested_deliverable=requested_deliverable,
+        conversation_id=conversation_id,
     )
 
 

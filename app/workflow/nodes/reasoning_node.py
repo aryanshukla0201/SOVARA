@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from app.models.model_factory import ModelFactory
+from app.services.context_manager import ContextManager
 from app.services.execution_telemetry import ExecutionTelemetry
 
 
@@ -11,6 +12,9 @@ class ReasoningNode:
         self,
         telemetry: ExecutionTelemetry | None = None,
     ):
+        self.telemetry = telemetry
+        self.context_manager = ContextManager()
+
         self.model = ModelFactory.create(
             "qwen",
             telemetry=telemetry,
@@ -22,6 +26,7 @@ class ReasoningNode:
         evidence: list[dict] | None = None,
         data_results: list[dict] | None = None,
         vision_results: list[dict] | None = None,
+        conversation_history: list[dict] | None = None,
     ) -> dict:
 
         evidence = evidence or []
@@ -107,7 +112,7 @@ CONTENT:
 """
                 )
 
-        if not context_parts:
+        if not context_parts and not conversation_history:
             answer = (
                 "The available evidence does not contain enough "
                 "information to answer the request."
@@ -123,7 +128,11 @@ CONTENT:
                 "model_used": None,
             }
 
-        context = "\n\n".join(context_parts)
+        context = self.context_manager.build_prompt_from_blocks(
+            user_query=user_query,
+            context_blocks=context_parts,
+            conversation_history=conversation_history,
+        )
 
         prompt = f"""
 USER REQUEST:
@@ -139,32 +148,38 @@ Produce a concise answer to the user's request.
 
 STRICT RULES:
 
-1. Use ONLY the supplied evidence.
+1. Use authoritative execution evidence when answering questions about supplied files, data, or images.
 
-2. Every factual claim MUST contain an exact evidence citation.
+2. You may use conversation context to answer follow-up questions and refer to information previously stated by the user or assistant.
 
-3. Citation format:
+3. Do NOT treat conversation context as authoritative execution evidence.
+
+4. Claims based on authoritative execution evidence MUST contain an exact evidence citation.
+
+5. Claims based only on conversation context do NOT require an evidence citation.
+
+6. Citation format:
 [evidence_id]
 
-4. Only use evidence IDs explicitly supplied above.
+7. Only use evidence IDs explicitly supplied above.
 
-5. Never invent or modify evidence IDs.
+8. Never invent or modify evidence IDs.
 
-6. Never output JSON.
+9. Never output JSON.
 
-7. Never output dictionaries.
+10 . Never output dictionaries.
 
-8. Never output internal execution state.
+11. Never output internal execution state.
 
-9. Do not claim causation unless explicitly supported.
+12. Do not claim causation unless explicitly supported.
 
-10. Preserve numerical values exactly.
+13. Preserve numerical values exactly.
 
-11. Clearly distinguish observations from interpretations.
+14. Clearly distinguish observations from interpretations.
 
-12. If evidence is insufficient, state that clearly.
+15. If neither conversation context nor authoritative evidence is sufficient, state that clearly.
 
-13. Return ONLY the human-readable answer.
+16. Return ONLY the human-readable answer.
 
 Before returning, verify every citation against the supplied evidence IDs.
 """
@@ -173,7 +188,10 @@ Before returning, verify every citation against the supplied evidence IDs.
             prompt,
             system_prompt=(
                 "You are SOVARA's grounded reasoning engine. "
-                "Every factual claim must have an exact evidence citation. "
+                "Use conversation context for conversational continuity. "
+                "Use authoritative execution evidence for file, data, and image claims. "
+                "Cite authoritative evidence exactly when used. "
+                "Never invent evidence IDs. "
                 "Return only human-readable text. "
                 "Never output JSON or internal state."
             ),
