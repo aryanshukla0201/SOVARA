@@ -54,6 +54,9 @@ class ExecutionTelemetry:
         if tool_name and tool_name not in self.tools_used:
             self.tools_used.append(tool_name)
 
+    def record_sandbox_execution(self) -> None:
+        self.record_tool("CodeSandbox")
+
     def record_file(self) -> None:
         self.files_processed += 1
 
