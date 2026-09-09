@@ -46,6 +46,7 @@ class SynthesisNode:
                 "source_filename": item.get("source_filename", ""),
                 "page_number": item.get("page_number"),
                 "evidence_type": item.get("evidence_type", "document"),
+                "relevance_score": item.get("relevance_score", 0.0),
                 "content": item.get(
                     "content",
                     item.get("text", ""),
@@ -62,6 +63,7 @@ class SynthesisNode:
                 grounded_evidence.append({
                     "evidence_id": evidence_id,
                     "evidence_type": "data_result",
+                    "relevance_score": 1.0,
                     "content": json.dumps(
                         item.get("result", item),
                         default=str,
@@ -73,7 +75,6 @@ class SynthesisNode:
                 continue
 
             file_id = item.get("file_id", "")
-
             result = item.get("result", {})
 
             observations = (
@@ -102,17 +103,30 @@ class SynthesisNode:
                     "confidence": observation.get(
                         "confidence",
                     ),
+                    "relevance_score": observation.get(
+                        "confidence",
+                        0.0,
+                    ),
                 })
 
-        evidence_context = json.dumps(
-            grounded_evidence,
-            indent=2,
-            default=str,
+        grounded_evidence.sort(
+            key=lambda item: float(
+                item.get("relevance_score", 0.0) or 0.0
+            ),
+            reverse=True,
+        )
+
+        evidence_context = "\n".join(
+            f"[{item['evidence_id']}] {item['content']}"
+            for item in grounded_evidence
+            if item.get("content")
         )
 
         conversation_context = self.context_manager.build_prompt_from_blocks(
             user_query=user_query,
-            context_blocks=[f"AUTHORITATIVE EVIDENCE:\n{evidence_context}"],
+            context_blocks=[
+                f"AUTHORITATIVE EVIDENCE:\n{evidence_context}"
+            ],
             conversation_history=conversation_history,
         )
 
@@ -121,6 +135,17 @@ You are the final answer generation stage of SOVARA.
 
 CONVERSATION CONTEXT:
 {conversation_context}
+
+RETRIEVAL PRIORITY:
+
+- Evidence is ordered from highest relevance to lowest relevance.
+- Prefer the highest-relevance evidence when answering.
+- Use lower-ranked evidence only when it directly contributes to the answer.
+- Do NOT let unrelated lower-ranked evidence override highly relevant evidence.
+- If one evidence item directly answers the user's question, answer from that
+  evidence rather than combining it with unrelated documents.
+- Evidence from different documents must not be combined unless the documents
+  are actually relevant to the same question.
 
 RULES:
 
@@ -169,6 +194,12 @@ the evidence does not establish it.
 20. Every paragraph containing factual information must contain
 at least one valid citation.
 
+21. When a highly relevant evidence item directly answers the question,
+do not substitute information from a lower-relevance unrelated item.
+
+22. If the top-ranked evidence clearly answers the question, prioritize it
+over all unrelated lower-ranked evidence.
+
 Before returning the answer, internally verify that every citation
 exactly matches one of the supplied evidence_id values.
 
@@ -179,6 +210,8 @@ Return ONLY the final answer.
             prompt,
             system_prompt=(
                 "You are SOVARA's final grounded answer generator. "
+                "Use the highest-relevance relevant evidence first. "
+                "Do not allow unrelated evidence to override relevant evidence. "
                 "Return only a clean human-readable answer. "
                 "Every factual claim requires an exact evidence citation. "
                 "Never output JSON or internal state. "

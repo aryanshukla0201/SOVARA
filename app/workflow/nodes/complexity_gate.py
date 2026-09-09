@@ -6,41 +6,36 @@ class ComplexityGate:
         document_results = result_state.get("document_results", [])
         data_results = result_state.get("data_results", [])
         vision_results = result_state.get("vision_results", [])
+        retrieved_evidence = result_state.get("retrieved_evidence", [])
 
         modality_count = sum(
             [
                 bool(document_results),
                 bool(data_results),
                 bool(vision_results),
+                bool(retrieved_evidence),
             ]
         )
 
-        # ---------------------------------------------------------
-        # MULTIMODAL SYNTHESIS
-        # ---------------------------------------------------------
-        # If evidence comes from two or more different modalities,
-        # the results should be interpreted together.
         if modality_count >= 2:
             return {
                 "synthesis_required": True,
-                "reason": "multiple modalities require cross-modal synthesis",
+                "reason": "multiple evidence modalities require synthesis",
             }
 
-        # ---------------------------------------------------------
-        # MULTIPLE DATA SOURCES
-        # ---------------------------------------------------------
-        # Even within a single modality, multiple deterministic
-        # analyses may need interpretation together.
+        if retrieved_evidence:
+            return {
+                "synthesis_required": True,
+                "reason": "retrieved knowledge evidence requires grounded synthesis",
+            }
+
         if len(data_results) > 1:
             return {
                 "synthesis_required": True,
                 "reason": "multiple data analyses require interpretation",
             }
 
-        # ---------------------------------------------------------
-        # SINGLE SOURCE
-        # ---------------------------------------------------------
         return {
             "synthesis_required": False,
-            "reason": "single evidence source is sufficient",
+            "reason": "single deterministic evidence source is sufficient",
         }

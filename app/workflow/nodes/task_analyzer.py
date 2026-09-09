@@ -69,6 +69,35 @@ deliverable
 Rules:
 
 - intent must be a short snake_case label.
+- For questions that explicitly ask about information stored in the user's
+  Knowledge Vault, use:
+  knowledge_question,
+  knowledge_lookup.
+
+- For questions about an uploaded document, use:
+  document_question.
+
+- For general world knowledge or common factual questions that do not refer
+  to the user's Knowledge Vault or uploaded files, use:
+  factual_question.
+
+- Do NOT use knowledge_question or knowledge_lookup for ordinary general
+  knowledge questions.
+
+Examples:
+
+"What happens during the power stroke?" when the relevant information is
+stored in the Knowledge Vault -> knowledge_question
+
+"What is the capital of France?" -> factual_question
+
+"What does this uploaded document say about revenue?" -> document_question
+
+- For normal conversation, testing, greetings, acknowledgements, or
+  conversational follow-ups that do not require stored knowledge, use:
+  conversation,
+  general_conversation,
+  general_analysis.
 - required_capabilities must be a JSON list of strings.
 - recommended_model_capability must be ONE string only, never a list.
 - Choose recommended_model_capability from:
@@ -255,7 +284,16 @@ Example:
 
         requires_vision = has_image
 
-        requires_rag = has_document
+        knowledge_intents = {
+            "knowledge_question",
+            "document_question",
+            "knowledge_lookup",
+        }
+
+        requires_rag = (
+            has_document
+            or intent in knowledge_intents
+        )
 
         requires_code = (
             "code" in capabilities

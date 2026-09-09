@@ -76,7 +76,22 @@ class RepairNode:
 
         grounded_evidence = []
 
-        for item in evidence:
+        sorted_evidence = sorted(
+            evidence,
+            key=lambda item: item.get("relevance_score", 0),
+            reverse=True,
+        )
+
+        if sorted_evidence:
+            top_score = sorted_evidence[0].get("relevance_score", 0)
+            sorted_evidence = [
+                item
+                for item in sorted_evidence
+                if item.get("relevance_score", 0) >= top_score - 0.10
+            ]
+
+
+        for item in sorted_evidence:
             evidence_id = item.get("evidence_id")
 
             content = (

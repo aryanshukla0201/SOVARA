@@ -54,6 +54,7 @@ class EvidenceNormalizer:
                     "evidence_type": str(evidence_type),
                     "content": str(content).strip(),
                     "confidence": item.get("confidence"),
+                    "relevance_score": item.get("relevance_score"),
                     "page_number": item.get("page_number"),
                     "chunk_id": item.get("chunk_id"),
                     "retrieval_method": (

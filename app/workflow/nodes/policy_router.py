@@ -32,9 +32,6 @@ class PolicyRouter:
         elif not routes:
             routes.append("reasoning")
 
-        if not state.uploaded_files and "vault" not in routes:
-            routes.insert(0, "vault")
-
         deduped = list(dict.fromkeys(routes))
         state.selected_routes = deduped
         return state.selected_routes

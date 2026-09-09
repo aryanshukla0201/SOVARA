@@ -76,6 +76,16 @@ class WorkflowGraph:
         input_types = list(dict.fromkeys([key for key, value in state.input_types.items() if value]))
         state.task_state = TaskAnalyzer(telemetry=self.telemetry).analyze(state.user_query, input_types)
 
+        print(
+            "\n[TASK DEBUG]",
+            "query=", state.user_query,
+            "intent=", state.task_state.intent,
+            "requires_rag=", state.task_state.requires_rag,
+            "capabilities=", state.task_state.required_capabilities,
+            "requires_synthesis=", state.task_state.requires_synthesis,
+            "\n"
+        )
+
         self._trace(
             state,
             node_name="task_analyzer",
@@ -125,7 +135,18 @@ class WorkflowGraph:
             item.model_dump() if hasattr(item, "model_dump") else item
             for item in evidence
         ]
-           
+        print("\n[VAULT DEBUG]")
+        for item in state.retrieved_evidence:
+            print(
+                item.get("evidence_id"),
+                "|",
+                item.get("relevance_score"),
+                "|",
+                item.get("source_filename"),
+                "|",
+                item.get("content", "")[:200],
+            )
+        print("[VAULT DEBUG END]\n")
         self.telemetry.record_tool("KnowledgeVault")
         return state
     

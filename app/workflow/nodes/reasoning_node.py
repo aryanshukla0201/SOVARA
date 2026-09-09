@@ -32,6 +32,68 @@ class ReasoningNode:
         evidence = evidence or []
         data_results = data_results or []
         vision_results = vision_results or []
+        conversation_history = conversation_history or []
+
+        # ---------------------------------------------------------
+        # NORMAL CONVERSATION
+        # ---------------------------------------------------------
+
+        if not evidence and not data_results and not vision_results:
+            context = self.context_manager.build_prompt_from_blocks(
+                user_query=user_query,
+                context_blocks=[],
+                conversation_history=conversation_history,
+            )
+
+            prompt = f"""
+You are SOVARA's conversational assistant.
+
+USER REQUEST:
+{user_query}
+
+CONVERSATION CONTEXT:
+{context}
+
+TASK:
+
+Respond naturally and helpfully to the user's request.
+
+RULES:
+
+1. This is a normal conversational request.
+2. Do not require external evidence.
+3. Do not mention unavailable evidence.
+4. Do not invent citations.
+5. Use conversation context when relevant.
+6. Return only the human-readable answer.
+"""
+
+            answer = self.model.generate(
+                prompt,
+                system_prompt=(
+                    "You are SOVARA's conversational assistant. "
+                    "Respond naturally to ordinary conversation. "
+                    "Do not require evidence or citations unless evidence "
+                    "is explicitly supplied."
+                ),
+            )
+
+            if not answer.strip():
+                answer = "I'm here and ready to help."
+
+            return {
+                "reasoning": answer,
+                "answer": answer,
+                "user_query": user_query,
+                "evidence_count": 0,
+                "data_result_count": 0,
+                "vision_result_count": 0,
+                "model_used": self.model.name,
+            }
+
+        # ---------------------------------------------------------
+        # GROUNDED REASONING
+        # ---------------------------------------------------------
 
         context_parts = []
 
@@ -40,6 +102,7 @@ class ReasoningNode:
                 continue
 
             evidence_id = item.get("evidence_id")
+
             if not evidence_id:
                 continue
 
@@ -112,22 +175,6 @@ CONTENT:
 """
                 )
 
-        if not context_parts and not conversation_history:
-            answer = (
-                "The available evidence does not contain enough "
-                "information to answer the request."
-            )
-
-            return {
-                "reasoning": answer,
-                "answer": answer,
-                "user_query": user_query,
-                "evidence_count": 0,
-                "data_result_count": 0,
-                "vision_result_count": 0,
-                "model_used": None,
-            }
-
         context = self.context_manager.build_prompt_from_blocks(
             user_query=user_query,
             context_blocks=context_parts,
@@ -150,7 +197,7 @@ STRICT RULES:
 
 1. Use authoritative execution evidence when answering questions about supplied files, data, or images.
 
-2. You may use conversation context to answer follow-up questions and refer to information previously stated by the user or assistant.
+2. You may use conversation context for follow-up questions.
 
 3. Do NOT treat conversation context as authoritative execution evidence.
 
@@ -167,7 +214,7 @@ STRICT RULES:
 
 9. Never output JSON.
 
-10 . Never output dictionaries.
+10. Never output dictionaries.
 
 11. Never output internal execution state.
 
@@ -177,7 +224,7 @@ STRICT RULES:
 
 14. Clearly distinguish observations from interpretations.
 
-15. If neither conversation context nor authoritative evidence is sufficient, state that clearly.
+15. If the evidence does not establish a claim, say so.
 
 16. Return ONLY the human-readable answer.
 
@@ -188,12 +235,11 @@ Before returning, verify every citation against the supplied evidence IDs.
             prompt,
             system_prompt=(
                 "You are SOVARA's grounded reasoning engine. "
-                "Use conversation context for conversational continuity. "
-                "Use authoritative execution evidence for file, data, and image claims. "
+                "Use authoritative execution evidence for file, data, "
+                "and image claims. "
                 "Cite authoritative evidence exactly when used. "
                 "Never invent evidence IDs. "
-                "Return only human-readable text. "
-                "Never output JSON or internal state."
+                "Return only human-readable text."
             ),
         )
 
