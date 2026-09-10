@@ -134,9 +134,34 @@ Requirements:
         )
 
         repaired_answer = adapter.generate(
-            prompt
+            prompt,
+            system_prompt=(
+                "You are SOVARA's citation repair engine. "
+                "Return ONLY the repaired human-readable answer. "
+                "Do not explain your reasoning. "
+                "Do not describe the task. "
+                "Do not output analysis or meta-commentary. "
+                "Do not output <think> tags. "
+                "Every factual claim must use an exact supplied evidence ID."
+            ),
+            num_predict=2048,
+            temperature=0.1,
         )
 
+        repaired_answer = re.sub(
+            r"<think>.*?</think>",
+            "",
+            repaired_answer,
+            flags=re.DOTALL,
+        ).strip()
+
+        repaired_answer = re.sub(
+            r"^.*?</think>\s*",
+            "",
+            repaired_answer,
+            flags=re.DOTALL,
+        ).strip()
+        
         return {
             "final_answer": repaired_answer,
             "synthesis_result": {

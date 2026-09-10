@@ -176,6 +176,11 @@ class WorkflowGraph:
                 [item.model_dump() for item in evidence]
             )
 
+            print("\n===== RETRIEVED DOCUMENT EVIDENCE =====")
+            for item in evidence:
+                print(item.model_dump())
+            print("========================================\n")
+
             if file_record.file_type == "pdf":
                 pages = len(
                     PDFParser.extract_text(

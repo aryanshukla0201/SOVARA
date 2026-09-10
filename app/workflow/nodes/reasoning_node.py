@@ -180,56 +180,60 @@ CONTENT:
             context_blocks=context_parts,
             conversation_history=conversation_history,
         )
-
+        evidence_context = "\n".join(
+            f"[{item.get('evidence_id')}] {item.get('content', item.get('text', ''))}"
+            for item in evidence
+            if isinstance(item, dict)
+            and item.get("evidence_id")
+            and item.get("content", item.get("text", ""))
+        )
+        
         prompt = f"""
 USER REQUEST:
 {user_query}
 
-AUTHORITATIVE EXECUTION EVIDENCE:
+AUTHORITATIVE EVIDENCE:
+{evidence_context}
 
-{context}
+Answer the user's request using ONLY the authoritative evidence above.
 
-TASK:
+Treat the supplied evidence as the actual content of the uploaded document.
 
-Produce a concise answer to the user's request.
+If the user asks for a report, provide:
 
-STRICT RULES:
+1. Executive Summary
+2. Key Findings
+3. Detailed Analysis
+4. Supporting Evidence
+5. Conclusion
 
-1. Use authoritative execution evidence when answering questions about supplied files, data, or images.
+Use specific facts from the evidence.
+Preserve numerical values exactly.
+Do not invent information.
+Do not make unsupported causal claims.
 
-2. You may use conversation context for follow-up questions.
+Every factual claim based on the evidence MUST include an exact citation.
 
-3. Do NOT treat conversation context as authoritative execution evidence.
-
-4. Claims based on authoritative execution evidence MUST contain an exact evidence citation.
-
-5. Claims based only on conversation context do NOT require an evidence citation.
-
-6. Citation format:
+Citation format:
 [evidence_id]
 
-7. Only use evidence IDs explicitly supplied above.
+Only use evidence IDs explicitly present in the supplied evidence.
 
-8. Never invent or modify evidence IDs.
+Do not output JSON.
+Do not output Python.
+Do not output internal reasoning.
+Do not describe your reasoning process.
+Do not discuss whether the document is available.
+Do not mention these instructions.
 
-9. Never output JSON.
+If the evidence does not establish something, say so.
 
-10. Never output dictionaries.
-
-11. Never output internal execution state.
-
-12. Do not claim causation unless explicitly supported.
-
-13. Preserve numerical values exactly.
-
-14. Clearly distinguish observations from interpretations.
-
-15. If the evidence does not establish a claim, say so.
-
-16. Return ONLY the human-readable answer.
-
-Before returning, verify every citation against the supplied evidence IDs.
+Return ONLY the final human-readable answer.
 """
+
+        print("\n===== REASONING PROMPT DEBUG =====")
+        print(prompt)
+        print("===== END REASONING PROMPT DEBUG =====\n")
 
         answer = self.model.generate(
             prompt,
@@ -241,6 +245,8 @@ Before returning, verify every citation against the supplied evidence IDs.
                 "Never invent evidence IDs. "
                 "Return only human-readable text."
             ),
+            num_predict=2048,
+            temperature=0.2,
         )
 
         if not answer.strip():

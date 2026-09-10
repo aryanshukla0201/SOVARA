@@ -12,7 +12,6 @@ from app.services.execution_telemetry import ExecutionTelemetry
 
 
 class QwenAdapter(BaseModelAdapter):
-
     name = "qwen3"
 
     def __init__(
@@ -39,15 +38,23 @@ class QwenAdapter(BaseModelAdapter):
             "prompt": prompt,
             "system": (
                 system_prompt
-                or "You are a careful reasoning and analysis engine."
+                or "Answer directly. "
+                "Return only the final answer. "
+                "Do not reveal reasoning."
             ),
             "stream": False,
+            "options": {
+                "num_predict": 2048,
+                "temperature": 0.2,
+                "top_p": 0.9,
+                "top_k": 20,
+                "repeat_penalty": 1.1,
+            },
         }
 
         if options:
-            payload["options"] = options
+            payload["options"].update(options)
 
-        
         try:
             if self.telemetry is not None:
                 self.telemetry.record_llm_call(
@@ -56,6 +63,7 @@ class QwenAdapter(BaseModelAdapter):
                         ("http://localhost", "http://127.0.0.1")
                     ),
                 )
+
             response = requests.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
@@ -66,58 +74,65 @@ class QwenAdapter(BaseModelAdapter):
 
             data = response.json()
 
-            return data.get("response", "").strip()
+            response_text = data.get("response", "").strip()
+
+            # Remove explicit thinking tags if the model emits them.
+            response_text = re.sub(
+                r"<think>.*?</think>",
+                "",
+                response_text,
+                flags=re.DOTALL,
+            ).strip()
+
+            return response_text
 
         except requests.RequestException as exc:
             raise RuntimeError(
-                f"Ollama request failed for model '{self.model_name}': {exc}"
+                f"Ollama request failed for model "
+                f"'{self.model_name}': {exc}"
             ) from exc
 
     def generate(
         self,
         prompt: str,
         system_prompt: str | None = None,
-        **kwargs: Any,
+        **options: Any,
     ) -> str:
-
         return self._call_ollama(
             prompt,
-            system_prompt,
-            **kwargs,
+            system_prompt=system_prompt,
+            **options,
         )
 
     def generate_structured(
         self,
         prompt: str,
-        schema: Any,
         system_prompt: str | None = None,
-        **kwargs: Any,
+        **options: Any,
     ) -> dict[str, Any]:
 
         structured_prompt = f"""
-Return ONLY valid JSON.
-
-Do not include markdown.
-Do not include explanations.
-Do not include text before or after the JSON.
-
-Expected schema:
-
-{schema}
-
-Task:
-
 {prompt}
+
+Return ONLY valid JSON.
+Do not include explanations.
+Do not include Markdown.
+Do not include reasoning.
+Do not include <think> tags.
 """
 
-        raw = self.generate(
+        raw = self._call_ollama(
             structured_prompt,
-            system_prompt=(
-                system_prompt
-                or "You are a structured output engine."
-            ),
-            **kwargs,
+            system_prompt=system_prompt,
+            **options,
         )
+
+        raw = re.sub(
+            r"<think>.*?</think>",
+            "",
+            raw,
+            flags=re.DOTALL,
+        ).strip()
 
         try:
             return json.loads(raw)
@@ -127,7 +142,7 @@ Task:
             match = re.search(
                 r"\{.*\}",
                 raw,
-                re.DOTALL,
+                flags=re.DOTALL,
             )
 
             if match:
@@ -136,16 +151,16 @@ Task:
                 except json.JSONDecodeError:
                     pass
 
-            raise ValueError(
-                f"Model returned invalid structured JSON: {raw[:500]}"
+            raise RuntimeError(
+                "Qwen returned invalid structured JSON."
             )
 
     def analyze_image(
         self,
         image_path: str,
-        task_context: str,
+        prompt: str,
+        **kwargs: Any,
     ) -> dict[str, Any]:
-
         raise NotImplementedError(
-            "QwenAdapter text model does not currently implement image analysis."
+            "QwenAdapter does not currently support direct image analysis."
         )
