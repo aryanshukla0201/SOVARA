@@ -9,8 +9,17 @@ class CodeExecutionNode:
     def __init__(self, sandbox=None, telemetry=None):
         self.sandbox = sandbox or CodeSandbox(telemetry=telemetry)
 
-    def run(self, code: str) -> dict:
-        result = self.sandbox.execute(code)
+    def run(
+        self,
+        code: str,
+        input_files: list[str] | None = None,
+        output_files: list[str] | None = None,
+    ) -> dict:
+        result = self.sandbox.execute(
+            code,
+            input_files=input_files,
+            output_files=output_files,
+        )
 
         return {
             "evidence_id": f"code_{uuid.uuid4().hex[:8]}",
@@ -24,4 +33,3 @@ class CodeExecutionNode:
             "docker_error": result.get("docker_error", False),
             "validation_error": result.get("validation_error", False),
         }
-    
