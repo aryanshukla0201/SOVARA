@@ -256,7 +256,7 @@ class CodeSandbox:
                         persistent_output_files.append(str(destination))
             
             return {
-                "success": result.returncode == 0,
+                "success": result.returncode == 0 and not result.stderr.strip(),
                 "stdout": result.stdout,
                 "stderr": result.stderr,
                 "return_code": result.returncode,
