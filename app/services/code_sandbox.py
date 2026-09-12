@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 
 class CodeSandbox:
-    def __init__(self, telemetry=None):
-        self.telemetry = telemetry
-    
     IMAGE = "sovara-sandbox:latest"
     TIMEOUT_SECONDS = 10
+
+    def __init__(self, telemetry=None):
+        self.telemetry = telemetry
 
     def execute(self, code: str) -> dict:
         if not code or not code.strip():
@@ -26,17 +27,17 @@ class CodeSandbox:
             script_path = Path(temp_dir) / "main.py"
             script_path.write_text(code, encoding="utf-8")
 
-            docker_exe = (
-                Path.home()
-                / "AppData/Local/Programs/DockerDesktop/resources/bin/docker.exe"
+            docker_exe = "docker"
+            container_name = (
+                f"sovara-sandbox-{next(tempfile._get_candidate_names())}"
             )
 
-            container_name = f"sovara-sandbox-{next(tempfile._get_candidate_names())}"
+            start_time = time.perf_counter()
 
             try:
                 result = subprocess.run(
                     [
-                        str(docker_exe),
+                        docker_exe,
                         "run",
                         "--name",
                         container_name,
@@ -62,10 +63,14 @@ class CodeSandbox:
                     timeout=self.TIMEOUT_SECONDS,
                 )
 
+                duration_ms = (time.perf_counter() - start_time) * 1000
+
             except subprocess.TimeoutExpired as exc:
+                duration_ms = (time.perf_counter() - start_time) * 1000
+
                 subprocess.run(
                     [
-                        str(docker_exe),
+                        docker_exe,
                         "rm",
                         "-f",
                         container_name,
@@ -75,7 +80,12 @@ class CodeSandbox:
                 )
 
                 if self.telemetry:
-                    self.telemetry.record_sandbox_execution()
+                    self.telemetry.record_sandbox_execution(
+                        success=False,
+                        return_code=-1,
+                        duration_ms=duration_ms,
+                        timeout=True,
+                    )
 
                 return {
                     "success": False,
@@ -86,8 +96,14 @@ class CodeSandbox:
                 }
 
             except FileNotFoundError:
+                duration_ms = (time.perf_counter() - start_time) * 1000
+
                 if self.telemetry:
-                    self.telemetry.record_sandbox_execution()
+                    self.telemetry.record_sandbox_execution(
+                        success=False,
+                        return_code=-1,
+                        duration_ms=duration_ms,
+                    )
 
                 return {
                     "success": False,
@@ -98,8 +114,14 @@ class CodeSandbox:
                 }
 
             except OSError as exc:
+                duration_ms = (time.perf_counter() - start_time) * 1000
+
                 if self.telemetry:
-                    self.telemetry.record_sandbox_execution()
+                    self.telemetry.record_sandbox_execution(
+                        success=False,
+                        return_code=-1,
+                        duration_ms=duration_ms,
+                    )
 
                 return {
                     "success": False,
@@ -110,7 +132,11 @@ class CodeSandbox:
                 }
 
             if self.telemetry:
-                self.telemetry.record_sandbox_execution()
+                self.telemetry.record_sandbox_execution(
+                    success=result.returncode == 0,
+                    return_code=result.returncode,
+                    duration_ms=duration_ms,
+                )
 
             return {
                 "success": result.returncode == 0,

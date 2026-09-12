@@ -10,6 +10,7 @@ from app.workflow.nodes.complexity_gate import ComplexityGate
 from app.workflow.nodes.data_node import DataNode
 from app.workflow.nodes.deliverable import DeliverableNode
 from app.workflow.nodes.document_node import DocumentNode
+from app.workflow.nodes.code_execution_node import CodeExecutionNode
 from app.workflow.nodes.input_processor import detect_input_modalities
 from app.workflow.nodes.policy_router import PolicyRouter
 from app.services.evidence_normalizer import EvidenceNormalizer
@@ -105,7 +106,8 @@ class WorkflowGraph:
             "document": 1,
             "data": 2,
             "vision": 3,
-            "reasoning": 4,
+            "code_execution": 4,
+            "reasoning": 5,
         }
 
         state.selected_routes.sort(
@@ -294,6 +296,28 @@ class WorkflowGraph:
                     for index in range(1, len(observations) + 1)
                 ],
             )
+
+        return state
+
+    def _code_execution(self, state: WorkflowState) -> WorkflowState:
+        self.telemetry.record_tool("CodeExecutionNode")
+
+        code = state.input_metadata.get("code", "")
+
+        result = CodeExecutionNode(
+            telemetry=self.telemetry
+        ).run(code)
+
+        state.data_results.append(result)
+
+        self._trace(
+            state,
+            node_name="code_execution",
+            model_used="n/a",
+            tools_used=["CodeExecutionNode", "CodeSandbox"],
+            relevant_output_ids=[result["evidence_id"]],
+            success=result["success"],
+        )
 
         return state
 
@@ -742,6 +766,7 @@ class WorkflowGraph:
         self.graph.add_node("data_route", self._data_route)
         self.graph.add_node("vision_route", self._vision_route)
         self.graph.add_node("reasoning_route", self._reasoning_route)
+        self.graph.add_node("code_execution", self._code_execution)
         self.graph.add_node("aggregate_results", self._aggregate_results)
         self.graph.add_node("complexity_gate", self._complexity_gate)
         self.graph.add_node("synthesis", self._synthesis)
@@ -767,6 +792,7 @@ class WorkflowGraph:
                 "data": "data_route",
                 "vision": "vision_route",
                 "reasoning": "reasoning_route",
+                "code_execution": "code_execution",
                 "aggregate_results": "aggregate_results",
             },
         )
@@ -774,6 +800,7 @@ class WorkflowGraph:
         self.graph.add_edge("data_route", "execution_dispatch")
         self.graph.add_edge("vision_route", "execution_dispatch")
         self.graph.add_edge("reasoning_route", "execution_dispatch")
+        self.graph.add_edge("code_execution", "execution_dispatch")
         self.graph.add_edge("vault_route", "execution_dispatch")
         self.graph.add_edge("aggregate_results", "complexity_gate")
         self.graph.add_conditional_edges(

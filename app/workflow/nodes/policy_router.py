@@ -21,8 +21,11 @@ class PolicyRouter:
             else:
                 routes.append("vault")
 
-        if "data_analysis" in capabilities or task.requires_code:
+        if "data_analysis" in capabilities:
             routes.append("data")
+
+        if task.requires_code:
+            routes.append("code_execution")
 
         if task.requires_vision or "vision_analysis" in capabilities:
             routes.append("vision")
