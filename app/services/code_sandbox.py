@@ -239,6 +239,19 @@ class CodeSandbox:
 
                     if source.is_file():
                         destination = persistent_output_dir / Path(filename).name
+
+                        if destination.exists():
+                            return {
+                                "success": False,
+                                "stdout": result.stdout,
+                                "stderr": f"Output file already exists: {filename}",
+                                "return_code": result.returncode,
+                                "timeout": False,
+                                "docker_error": False,
+                                "validation_error": True,
+                                "output_files": persistent_output_files,
+                            }
+
                         shutil.copy2(source, destination)
                         persistent_output_files.append(str(destination))
             
