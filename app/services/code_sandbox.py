@@ -76,20 +76,36 @@ class CodeSandbox:
             for input_file in input_files:
                 source = Path(input_file)
 
-                if not source.is_file():
-                    return {
-                        "success": False,
-                        "stdout": "",
-                        "stderr": f"Input file not found: {input_file}",
-                        "return_code": -1,
-                        "timeout": False,
-                        "docker_error": False,
-                        "validation_error": True,
-                        "output_files": [],
-                    }
+                for input_file in input_files:
+                    source = Path(input_file)
 
-                destination = input_dir / source.name
-                shutil.copy2(source, destination)
+                    if not source.is_file():
+                        return {
+                            "success": False,
+                            "stdout": "",
+                            "stderr": f"Input file not found: {input_file}",
+                            "return_code": -1,
+                            "timeout": False,
+                            "docker_error": False,
+                            "validation_error": True,
+                            "output_files": [],
+                        }
+
+                    destination = input_dir / source.name
+
+                    if destination.exists():
+                        return {
+                            "success": False,
+                            "stdout": "",
+                            "stderr": f"Duplicate input filename: {source.name}",
+                            "return_code": -1,
+                            "timeout": False,
+                            "docker_error": False,
+                            "validation_error": True,
+                            "output_files": [],
+                        }
+
+                    shutil.copy2(source, destination)
 
             output_dir = Path(temp_dir) / "output"
             output_dir.mkdir()
