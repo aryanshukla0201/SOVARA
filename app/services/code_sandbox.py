@@ -77,7 +77,16 @@ class CodeSandbox:
                 source = Path(input_file)
 
                 if not source.is_file():
-                    continue
+                    return {
+                        "success": False,
+                        "stdout": "",
+                        "stderr": f"Input file not found: {input_file}",
+                        "return_code": -1,
+                        "timeout": False,
+                        "docker_error": False,
+                        "validation_error": True,
+                        "output_files": [],
+                    }
 
                 destination = input_dir / source.name
                 shutil.copy2(source, destination)
@@ -194,7 +203,10 @@ class CodeSandbox:
                     "stdout": "",
                     "stderr": f"Docker execution failed: {exc}",
                     "return_code": -1,
+                    "timeout": False,
                     "docker_error": True,
+                    "validation_error": False,
+                    "output_files": [],
                 }
 
             if self.telemetry:
