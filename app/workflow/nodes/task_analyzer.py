@@ -207,6 +207,47 @@ Example:
             for capability in capabilities
             if str(capability).strip()
         ]
+                # ---------------------------------------------------------
+        # DETERMINISTIC CODE INTENT
+        # ---------------------------------------------------------
+
+        query_lower = user_query.lower()
+
+        code_intent_terms = (
+            "write code",
+            "generate code",
+            "create code",
+            "run code",
+            "execute code",
+            "python code",
+            "write a python",
+            "generate a python",
+            "calculate using python",
+            "script",
+            "program",
+        )
+
+        computational_terms = (
+            "calculate",
+            "compute",
+            "perform the calculation",
+            "arithmetic",
+            "formula",
+        )
+
+        explicit_code_intent = any(
+            term in query_lower
+            for term in code_intent_terms
+        )
+
+        computational_intent = any(
+            term in query_lower
+            for term in computational_terms
+        )
+
+        if explicit_code_intent or computational_intent:
+            if "code" not in capabilities:
+                capabilities.append("code")
 
         # ---------------------------------------------------------
         # INPUT-DRIVEN ROUTING

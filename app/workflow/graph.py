@@ -11,6 +11,8 @@ from app.workflow.nodes.data_node import DataNode
 from app.workflow.nodes.deliverable import DeliverableNode
 from app.workflow.nodes.document_node import DocumentNode
 from app.workflow.nodes.code_execution_node import CodeExecutionNode
+from app.workflow.nodes.code_pipeline import CodePipeline
+from app.workflow.nodes.code_agent import CodeAgent
 from app.workflow.nodes.input_processor import detect_input_modalities
 from app.workflow.nodes.policy_router import PolicyRouter
 from app.services.evidence_normalizer import EvidenceNormalizer
@@ -300,23 +302,34 @@ class WorkflowGraph:
         return state
 
     def _code_execution(self, state: WorkflowState) -> WorkflowState:
-        self.telemetry.record_tool("CodeExecutionNode")
+        self.telemetry.record_tool("CodePipeline")
 
-        code = state.input_metadata.get("code", "")
+        input_files = [
+            file.storage_path
+            for file in state.uploaded_files
+            if file.storage_path
+        ]
 
-        result = CodeExecutionNode(
-            telemetry=self.telemetry
-        ).run(code)
+        result = CodePipeline(
+            telemetry=self.telemetry,
+        ).run(
+            user_query=state.user_query,
+            input_files=input_files,
+        )
 
-        state.data_results.append(result)
+        state.code_results.append(result)
 
         self._trace(
             state,
             node_name="code_execution",
-            model_used="n/a",
-            tools_used=["CodeExecutionNode", "CodeSandbox"],
+            model_used="qwen2.5-coder:7b-instruct",
+            tools_used=[
+                "CodePipeline",
+                "CodeAgent",
+                "CodeSandbox",
+            ],
             relevant_output_ids=[result["evidence_id"]],
-            success=result["success"],
+            success=result.get("success", False),
         )
 
         return state
@@ -327,6 +340,7 @@ class WorkflowGraph:
             user_query=state.user_query,
             evidence=state.retrieved_evidence,
             data_results=state.data_results,
+            code_results=state.code_results,
             vision_results=state.vision_results,
             conversation_history=state.conversation_history,
         )
@@ -373,6 +387,7 @@ class WorkflowGraph:
         state.aggregated_results = {
             "document_results": state.document_results,
             "data_results": state.data_results,
+            "code_results": state.code_results,
             "vision_results": state.vision_results,
             "reasoning_results": state.reasoning_results,
             "retrieved_evidence": state.retrieved_evidence,
@@ -418,6 +433,7 @@ class WorkflowGraph:
             state.user_query,
             state.retrieved_evidence,
             state.data_results,
+            state.code_results,
             state.vision_results,
             state.conversation_history,
         )
@@ -498,6 +514,7 @@ class WorkflowGraph:
         verification_evidence = [
             *state.retrieved_evidence,
             *state.data_results,
+            *state.code_results,
             *state.vision_results,
         ]
 
@@ -508,6 +525,7 @@ class WorkflowGraph:
                 "evidence_count": len(verification_evidence),
                 "document_results": state.document_results,
                 "data_results": state.data_results,
+                "code_results": state.code_results,
                 "vision_results": state.vision_results,
             },
         }

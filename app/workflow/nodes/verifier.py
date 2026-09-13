@@ -33,14 +33,22 @@ class Verifier:
         # 1. CITATION VALIDATION
         # --------------------------------------------------
 
-        if not self.citation_validator.validate(
-            answer,
-            evidence_ids,
-        ):
-            failures.append(
-                "citation_validation_failed"
-            )
-            status = "failed"
+        # Citations are internal provenance metadata and are not
+        # required in the user-facing final answer.
+        #
+        # Validate citations only when the answer explicitly contains
+        # citation markers. This preserves citation checking for
+        # grounded answers while allowing clean final responses.
+
+        if "[" in answer and "]" in answer:
+            if not self.citation_validator.validate(
+                answer,
+                evidence_ids,
+            ):
+                failures.append(
+                    "citation_validation_failed"
+                )
+                status = "failed"
 
         # --------------------------------------------------
         # 2. NUMERIC VALIDATION

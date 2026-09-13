@@ -26,32 +26,35 @@ class SynthesisNode:
         user_query: str,
         evidence: list[dict],
         data_results: list[dict],
+        code_results: list[dict],
         vision_results: list[dict],
         conversation_history: list[dict] | None = None,
     ) -> dict:
 
         grounded_evidence = []
 
-        for item in evidence:
+        for item in code_results:
             if not isinstance(item, dict):
                 continue
 
             evidence_id = item.get("evidence_id")
 
-            if not evidence_id:
-                continue
-
-            grounded_evidence.append({
-                "evidence_id": evidence_id,
-                "source_filename": item.get("source_filename", ""),
-                "page_number": item.get("page_number"),
-                "evidence_type": item.get("evidence_type", "document"),
-                "relevance_score": item.get("relevance_score", 0.0),
-                "content": item.get(
-                    "content",
-                    item.get("text", ""),
-                ),
-            })
+            if evidence_id:
+                grounded_evidence.append({
+                    "evidence_id": evidence_id,
+                    "evidence_type": "code_execution_result",
+                    "relevance_score": 1.0,
+                    "content": json.dumps(
+                        {
+                            "success": item.get("success", False),
+                            "stdout": item.get("stdout", ""),
+                            "stderr": item.get("stderr", ""),
+                            "return_code": item.get("return_code", -1),
+                            "output_files": item.get("output_files", []),
+                        },
+                        default=str,
+                    ),
+                })
 
         for item in data_results:
             if not isinstance(item, dict):
@@ -151,53 +154,45 @@ RULES:
 
 1. Answer ONLY using the authoritative evidence above.
 
-2. Every factual claim MUST have at least one citation.
+2. Use the authoritative evidence to support factual claims.
 
-3. Citations MUST use an exact evidence_id from the evidence.
+3. Evidence IDs are internal traceability metadata.
 
-4. Citation format MUST be exactly:
-[evidence_id]
+4. NEVER expose evidence IDs, internal IDs, request IDs,
+execution IDs, or other internal metadata in the final answer.
 
-5. Example:
-The document describes market linkage between farmers and buyers [file_123_ev_001].
+5. Do NOT write citations such as [evidence_id] or [code_12345678].
 
-6. NEVER write a citation without square brackets.
+6. Return a clean human-readable answer without citation markers.
 
-7. NEVER modify an evidence_id.
+7. Preserve exact numerical values from the authoritative evidence.
 
-8. NEVER invent an evidence_id.
+8. Do NOT output JSON.
 
-9. NEVER use Markdown inside citation brackets.
+9. Do NOT output Python dictionaries.
 
-10. Multiple citations must be separate:
-[file_123_ev_001] [file_123_ev_002]
+10. Do NOT output internal execution state.
 
-11. Do NOT output JSON.
+11. Do NOT output evidence lists.
 
-12. Do NOT output Python dictionaries.
+12. Do NOT explain the verification process.
 
-13. Do NOT output internal execution state.
+13. Return ONLY a clean human-readable final answer.
 
-14. Do NOT output evidence lists.
-
-15. Do NOT explain the verification process.
-
-16. Return ONLY a clean human-readable final answer.
-
-17. If the evidence cannot establish a claim, explicitly state that
+14. If the evidence cannot establish a claim, explicitly state that
 the evidence does not establish it.
 
-18. Do not make unsupported causal claims.
+15. Do not make unsupported causal claims.
 
-19. Preserve exact numerical values from evidence.
+16. Preserve exact numerical values from evidence.
 
-20. Every paragraph containing factual information must contain
+17. Every paragraph containing factual information must contain
 at least one valid citation.
 
-21. When a highly relevant evidence item directly answers the question,
+18. When a highly relevant evidence item directly answers the question,
 do not substitute information from a lower-relevance unrelated item.
 
-22. If the top-ranked evidence clearly answers the question, prioritize it
+19. If the top-ranked evidence clearly answers the question, prioritize it
 over all unrelated lower-ranked evidence.
 
 Before returning the answer, internally verify that every citation
@@ -213,9 +208,9 @@ Return ONLY the final answer.
                 "Use the highest-relevance relevant evidence first. "
                 "Do not allow unrelated evidence to override relevant evidence. "
                 "Return only a clean human-readable answer. "
-                "Every factual claim requires an exact evidence citation. "
-                "Never output JSON or internal state. "
-                "Never invent evidence IDs."
+                "Use authoritative evidence to support the answer. "
+                "Never expose evidence IDs or internal metadata. "
+                "Return only clean human-readable text."
             ),
         )
 

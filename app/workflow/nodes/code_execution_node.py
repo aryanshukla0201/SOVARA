@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from pathlib import Path
 
 from app.services.code_sandbox import CodeSandbox
 
@@ -12,13 +13,15 @@ class CodeExecutionNode:
     def run(
         self,
         code: str,
-        input_files: list[str] | None = None,
+        input_files: list[str | Path] | None = None,
         output_files: list[str] | None = None,
+        output_directory: str | Path | None = None,
     ) -> dict:
         result = self.sandbox.execute(
             code,
             input_files=input_files,
             output_files=output_files,
+            output_directory=output_directory,
         )
 
         return {
@@ -32,4 +35,5 @@ class CodeExecutionNode:
             "timeout": result.get("timeout", False),
             "docker_error": result.get("docker_error", False),
             "validation_error": result.get("validation_error", False),
+            "output_files": result.get("output_files", []),
         }

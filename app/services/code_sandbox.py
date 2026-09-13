@@ -35,6 +35,7 @@ class CodeSandbox:
 
         input_files = input_files or []
         output_files = output_files or []
+
         for filename in output_files:
             path = Path(filename)
 
@@ -49,6 +50,7 @@ class CodeSandbox:
                     "validation_error": True,
                     "output_files": [],
                 }
+
         persistent_output_dir = (
             Path(output_directory)
             if output_directory
@@ -62,10 +64,15 @@ class CodeSandbox:
             )
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            script_path = Path(temp_dir) / "main.py"
-            script_path.write_text(code, encoding="utf-8")
+            temp_path = Path(temp_dir)
 
-            input_dir = Path(temp_dir) / "input"
+            script_path = temp_path / "main.py"
+            script_path.write_text(
+                code,
+                encoding="utf-8",
+            )
+
+            input_dir = temp_path / "input"
             input_dir.mkdir()
 
             shutil.copy2(
@@ -76,41 +83,42 @@ class CodeSandbox:
             for input_file in input_files:
                 source = Path(input_file)
 
-                for input_file in input_files:
-                    source = Path(input_file)
+                if not source.is_file():
+                    return {
+                        "success": False,
+                        "stdout": "",
+                        "stderr": f"Input file not found: {input_file}",
+                        "return_code": -1,
+                        "timeout": False,
+                        "docker_error": False,
+                        "validation_error": True,
+                        "output_files": [],
+                    }
 
-                    if not source.is_file():
-                        return {
-                            "success": False,
-                            "stdout": "",
-                            "stderr": f"Input file not found: {input_file}",
-                            "return_code": -1,
-                            "timeout": False,
-                            "docker_error": False,
-                            "validation_error": True,
-                            "output_files": [],
-                        }
+                destination = input_dir / source.name
 
-                    destination = input_dir / source.name
+                if destination.exists():
+                    return {
+                        "success": False,
+                        "stdout": "",
+                        "stderr": f"Duplicate input filename: {source.name}",
+                        "return_code": -1,
+                        "timeout": False,
+                        "docker_error": False,
+                        "validation_error": True,
+                        "output_files": [],
+                    }
 
-                    if destination.exists():
-                        return {
-                            "success": False,
-                            "stdout": "",
-                            "stderr": f"Duplicate input filename: {source.name}",
-                            "return_code": -1,
-                            "timeout": False,
-                            "docker_error": False,
-                            "validation_error": True,
-                            "output_files": [],
-                        }
+                shutil.copy2(
+                    source,
+                    destination,
+                )
 
-                    shutil.copy2(source, destination)
-
-            output_dir = Path(temp_dir) / "output"
+            output_dir = temp_path / "output"
             output_dir.mkdir()
 
             docker_exe = "docker"
+
             container_name = (
                 f"sovara-sandbox-{next(tempfile._get_candidate_names())}"
             )
@@ -138,7 +146,7 @@ class CodeSandbox:
                         "-v",
                         f"{input_dir}:/sandbox/input:ro",
                         "-v",
-                        f"{temp_dir}/output:/sandbox/output:rw",
+                        f"{output_dir}:/sandbox/output:rw",
                         self.IMAGE,
                         "python",
                         "/sandbox/input/main.py",
@@ -148,10 +156,14 @@ class CodeSandbox:
                     timeout=self.TIMEOUT_SECONDS,
                 )
 
-                duration_ms = (time.perf_counter() - start_time) * 1000
+                duration_ms = (
+                    time.perf_counter() - start_time
+                ) * 1000
 
             except subprocess.TimeoutExpired as exc:
-                duration_ms = (time.perf_counter() - start_time) * 1000
+                duration_ms = (
+                    time.perf_counter() - start_time
+                ) * 1000
 
                 subprocess.run(
                     [
@@ -184,7 +196,9 @@ class CodeSandbox:
                 }
 
             except FileNotFoundError:
-                duration_ms = (time.perf_counter() - start_time) * 1000
+                duration_ms = (
+                    time.perf_counter() - start_time
+                ) * 1000
 
                 if self.telemetry:
                     self.telemetry.record_sandbox_execution(
@@ -205,7 +219,9 @@ class CodeSandbox:
                 }
 
             except OSError as exc:
-                duration_ms = (time.perf_counter() - start_time) * 1000
+                duration_ms = (
+                    time.perf_counter() - start_time
+                ) * 1000
 
                 if self.telemetry:
                     self.telemetry.record_sandbox_execution(
@@ -231,32 +247,42 @@ class CodeSandbox:
                     return_code=result.returncode,
                     duration_ms=duration_ms,
                 )
+
+            execution_success = (
+                result.returncode == 0
+                and not result.stderr.strip()
+            )
+
             persistent_output_files: list[str] = []
 
-            if persistent_output_dir:
+            if execution_success and persistent_output_dir:
                 for filename in output_files:
-                    source = Path(temp_dir) / "output" / filename
+                    source = output_dir / filename
 
-                    if source.is_file():
-                        destination = persistent_output_dir / Path(filename).name
+                    if not source.is_file():
+                        continue
 
-                        if destination.exists():
-                            return {
-                                "success": False,
-                                "stdout": result.stdout,
-                                "stderr": f"Output file already exists: {filename}",
-                                "return_code": result.returncode,
-                                "timeout": False,
-                                "docker_error": False,
-                                "validation_error": True,
-                                "output_files": persistent_output_files,
-                            }
+                    destination = (
+                        persistent_output_dir / Path(filename).name
+                    )
 
-                        shutil.copy2(source, destination)
-                        persistent_output_files.append(str(destination))
-            
+                    if destination.exists():
+                        return {
+                            "success": False,
+                            "stdout": result.stdout,
+                            "stderr": f"Output file already exists: {filename}",
+                            "return_code": result.returncode,
+                            "timeout": False,
+                            "docker_error": False,
+                            "validation_error": True,
+                            "output_files": persistent_output_files,
+                        }
+
+                    shutil.copy2(source, destination)
+                    persistent_output_files.append(str(destination))
+
             return {
-                "success": result.returncode == 0 and not result.stderr.strip(),
+                "success": execution_success,
                 "stdout": result.stdout,
                 "stderr": result.stderr,
                 "return_code": result.returncode,

@@ -11,6 +11,7 @@ class ResultState(BaseModel):
     retrieved_evidence: list[EvidenceRecord] = Field(default_factory=list)
     document_results: list[dict] = Field(default_factory=list)
     data_results: list[dict] = Field(default_factory=list)
+    code_results: list[dict] = Field(default_factory=list)
     vision_results: list[dict] = Field(default_factory=list)
     reasoning_results: list[dict] = Field(default_factory=list)
     aggregated_results: dict = Field(default_factory=dict)

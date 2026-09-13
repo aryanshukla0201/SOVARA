@@ -144,6 +144,7 @@ def run_multimodal_analysis(
             "evidence": [
                 *result.retrieved_evidence,
                 *result.data_results,
+                *result.code_results,
                 *result.vision_results,
             ],
             "verification_status": result.verification_status,

@@ -25,12 +25,14 @@ class ReasoningNode:
         user_query: str,
         evidence: list[dict] | None = None,
         data_results: list[dict] | None = None,
+        code_results: list[dict] | None = None,
         vision_results: list[dict] | None = None,
         conversation_history: list[dict] | None = None,
     ) -> dict:
 
         evidence = evidence or []
         data_results = data_results or []
+        code_results = code_results or []
         vision_results = vision_results or []
         conversation_history = conversation_history or []
 
@@ -38,7 +40,7 @@ class ReasoningNode:
         # NORMAL CONVERSATION
         # ---------------------------------------------------------
 
-        if not evidence and not data_results and not vision_results:
+        if not evidence and not data_results and not code_results and not vision_results:
             context = self.context_manager.build_prompt_from_blocks(
                 user_query=user_query,
                 context_blocks=[],
@@ -145,6 +147,31 @@ RESULT:
 """
             )
 
+        for item in code_results:
+            if not isinstance(item, dict):
+                continue
+
+            evidence_id = item.get("evidence_id")
+
+            if not evidence_id:
+                continue
+
+            context_parts.append(
+                f"""
+        CODE EXECUTION RESULT:
+        {json.dumps(
+            {
+                "success": item.get("success", False),
+                "stdout": item.get("stdout", ""),
+                "stderr": item.get("stderr", ""),
+                "return_code": item.get("return_code", -1),
+                "output_files": item.get("output_files", []),
+            },
+            default=str,
+        )}
+        """
+            )
+                
         for item in vision_results:
             if not isinstance(item, dict):
                 continue
@@ -180,13 +207,45 @@ CONTENT:
             context_blocks=context_parts,
             conversation_history=conversation_history,
         )
-        evidence_context = "\n".join(
-            f"[{item.get('evidence_id')}] {item.get('content', item.get('text', ''))}"
-            for item in evidence
-            if isinstance(item, dict)
-            and item.get("evidence_id")
-            and item.get("content", item.get("text", ""))
-        )
+        evidence_context_parts = []
+
+        for item in evidence:
+            if not isinstance(item, dict):
+                continue
+
+            evidence_id = item.get("evidence_id")
+            content = item.get("content", item.get("text", ""))
+
+            if evidence_id and content:
+                evidence_context_parts.append(
+                    f"[{evidence_id}] {content}"
+                )
+
+        for item in code_results:
+            if not isinstance(item, dict):
+                continue
+
+            evidence_id = item.get("evidence_id")
+
+            if not evidence_id:
+                continue
+
+            content = json.dumps(
+                {
+                    "success": item.get("success", False),
+                    "stdout": item.get("stdout", ""),
+                    "stderr": item.get("stderr", ""),
+                    "return_code": item.get("return_code", -1),
+                    "output_files": item.get("output_files", []),
+                },
+                default=str,
+            )
+
+            evidence_context_parts.append(
+                f"[{evidence_id}] {content}"
+            )
+
+        evidence_context = "\n".join(evidence_context_parts)
         
         prompt = f"""
 USER REQUEST:
@@ -212,12 +271,10 @@ Preserve numerical values exactly.
 Do not invent information.
 Do not make unsupported causal claims.
 
-Every factual claim based on the evidence MUST include an exact citation.
+Use the authoritative evidence to answer the request.
 
-Citation format:
-[evidence_id]
-
-Only use evidence IDs explicitly present in the supplied evidence.
+Evidence IDs are internal traceability metadata.
+NEVER expose evidence IDs or citation markers in the final answer.
 
 Do not output JSON.
 Do not output Python.
@@ -241,8 +298,8 @@ Return ONLY the final human-readable answer.
                 "You are SOVARA's grounded reasoning engine. "
                 "Use authoritative execution evidence for file, data, "
                 "and image claims. "
-                "Cite authoritative evidence exactly when used. "
-                "Never invent evidence IDs. "
+                "Use authoritative evidence when answering. "
+                "Never expose internal evidence IDs or metadata. "
                 "Return only human-readable text."
             ),
             num_predict=2048,

@@ -4,6 +4,7 @@ from app.core.config import get_settings
 from app.models.base import BaseModelAdapter
 from app.models.gemma_adapter import GemmaAdapter
 from app.models.qwen_adapter import QwenAdapter
+from app.models.qwen_coder_adapter import QwenCoderAdapter
 from app.services.execution_telemetry import ExecutionTelemetry
 
 
@@ -23,6 +24,19 @@ class ModelFactory:
                 model_name=(
                     kwargs.get("model_name")
                     or settings.qwen_model
+                ),
+                base_url=(
+                    kwargs.get("base_url")
+                    or settings.ollama_base_url
+                ),
+                telemetry=telemetry,
+            )
+
+        if model_type == "qwen_coder":
+            return QwenCoderAdapter(
+                model_name=(
+                    kwargs.get("model_name")
+                    or "qwen2.5-coder:7b-instruct"
                 ),
                 base_url=(
                     kwargs.get("base_url")

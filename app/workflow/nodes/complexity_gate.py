@@ -5,6 +5,7 @@ class ComplexityGate:
     def evaluate(self, result_state: dict) -> dict:
         document_results = result_state.get("document_results", [])
         data_results = result_state.get("data_results", [])
+        code_results = result_state.get("code_results", [])
         vision_results = result_state.get("vision_results", [])
         retrieved_evidence = result_state.get("retrieved_evidence", [])
 
@@ -12,6 +13,7 @@ class ComplexityGate:
             [
                 bool(document_results),
                 bool(data_results),
+                bool(code_results),
                 bool(vision_results),
                 bool(retrieved_evidence),
             ]
@@ -29,7 +31,7 @@ class ComplexityGate:
                 "reason": "retrieved knowledge evidence requires grounded synthesis",
             }
 
-        if len(data_results) > 1:
+        if len(data_results) > 1 or len(code_results) > 1:
             return {
                 "synthesis_required": True,
                 "reason": "multiple data analyses require interpretation",

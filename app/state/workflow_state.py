@@ -38,6 +38,7 @@ class WorkflowState(BaseModel):
     document_results: list[dict] = Field(default_factory=list)
     data_results: list[dict] = Field(default_factory=list)
     vision_results: list[dict] = Field(default_factory=list)
+    code_results: list[dict] = Field(default_factory=list)
     reasoning_results: list[dict] = Field(default_factory=list)
     aggregated_results: dict = Field(default_factory=dict)
     synthesis_required: bool = False
