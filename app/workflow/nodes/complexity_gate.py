@@ -4,10 +4,17 @@ from __future__ import annotations
 class ComplexityGate:
     def evaluate(self, result_state: dict) -> dict:
         document_results = result_state.get("document_results", [])
+        document_fact_results = result_state.get("document_fact_results", [])
         data_results = result_state.get("data_results", [])
         code_results = result_state.get("code_results", [])
         vision_results = result_state.get("vision_results", [])
         retrieved_evidence = result_state.get("retrieved_evidence", [])
+
+        if document_fact_results:
+            return {
+                "synthesis_required": False,
+                "reason": "deterministic document fact extraction already produced the answer",
+            }
 
         modality_count = sum(
             [

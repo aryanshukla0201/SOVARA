@@ -36,6 +36,7 @@ class WorkflowState(BaseModel):
     retrieved_evidence: list[dict] = Field(default_factory=list)
     vault_results: list[dict] = Field(default_factory=list)
     document_results: list[dict] = Field(default_factory=list)
+    document_fact_results: list[dict] = Field(default_factory=list)
     data_results: list[dict] = Field(default_factory=list)
     vision_results: list[dict] = Field(default_factory=list)
     code_results: list[dict] = Field(default_factory=list)

@@ -10,6 +10,9 @@ from app.workflow.nodes.complexity_gate import ComplexityGate
 from app.workflow.nodes.data_node import DataNode
 from app.workflow.nodes.deliverable import DeliverableNode
 from app.workflow.nodes.document_node import DocumentNode
+from app.workflow.nodes.document_fact_extractor import (
+    DocumentFactExtractor,
+)
 from app.workflow.nodes.code_execution_node import CodeExecutionNode
 from app.workflow.nodes.code_pipeline import CodePipeline
 from app.workflow.nodes.code_agent import CodeAgent
@@ -92,7 +95,7 @@ class WorkflowGraph:
         self._trace(
             state,
             node_name="task_analyzer",
-            model_used="qwen3",
+            model_used="phi4-mini:latest",
             tools_used=["TaskAnalyzer"],
             relevant_output_ids=["task_1"],
         )
@@ -153,6 +156,27 @@ class WorkflowGraph:
         print("[VAULT DEBUG END]\n")
         self.telemetry.record_tool("KnowledgeVault")
         return state
+
+    def _should_use_document_fact_extraction(
+        self,
+        state: WorkflowState,
+    ) -> str:
+        field = DocumentFactExtractor.detect_field(
+            state.user_query
+        )
+
+        if (
+            field
+            and state.retrieved_evidence
+            and any(
+                isinstance(item, dict)
+                and item.get("content")
+                for item in state.retrieved_evidence
+            )
+        ):
+            return "document_fact"
+
+        return "reasoning"
     
     def _document_route(self, state: WorkflowState) -> WorkflowState:
         document_node = DocumentNode(
@@ -334,6 +358,41 @@ class WorkflowGraph:
 
         return state
 
+    def _document_fact_route(
+        self,
+        state: WorkflowState,
+    ) -> WorkflowState:
+        result = DocumentFactExtractor.extract(
+            query=state.user_query,
+            evidence=state.retrieved_evidence,
+        )
+
+        if result.success:
+            state.document_fact_results.append(
+                {
+                    "answer": result.answer,
+                    "evidence_id": result.evidence_id,
+                    "field": result.field,
+                    "method": "deterministic_document_fact_extraction",
+                }
+            )
+
+            print("DEBUG document_fact_results:", state.document_fact_results)
+
+            self._trace(
+                state,
+                node_name="document_fact_extraction",
+                model_used="n/a",
+                tools_used=["DocumentFactExtractor"],
+                relevant_output_ids=[
+                    result.evidence_id
+                ]
+                if result.evidence_id
+                else [],
+            )
+
+        return state
+    
     def _reasoning_route(self, state: WorkflowState) -> WorkflowState:
         self.telemetry.record_tool("ReasoningNode")
         result = ReasoningNode(telemetry=self.telemetry).run(
@@ -350,7 +409,7 @@ class WorkflowGraph:
         self._trace(
             state,
             node_name="reasoning_route",
-            model_used="qwen3",
+            model_used="phi4-mini:latest",
             tools_used=["ReasoningNode"],
             relevant_output_ids=[
                 f"reasoning_{len(state.reasoning_results)}"
@@ -366,7 +425,15 @@ class WorkflowGraph:
 
         state.current_route = state.pending_routes[0]
         state.pending_routes = state.pending_routes[1:]
-        state.completed_routes = list(dict.fromkeys(state.completed_routes + [state.current_route]))
+
+        # For simple exact document facts, replace the LLM
+        # reasoning route with deterministic extraction.
+        if (
+            state.current_route == "reasoning"
+            and state.retrieved_evidence
+            and DocumentFactExtractor.detect_field(state.user_query) is not None
+        ):
+            state.current_route = "document_fact"
 
         self._trace(
             state,
@@ -386,6 +453,7 @@ class WorkflowGraph:
 
         state.aggregated_results = {
             "document_results": state.document_results,
+            "document_fact_results": state.document_fact_results,
             "data_results": state.data_results,
             "code_results": state.code_results,
             "vision_results": state.vision_results,
@@ -443,14 +511,53 @@ class WorkflowGraph:
         self._trace(
             state,
             node_name="synthesis",
-            model_used="qwen3",
+            model_used="phi4-mini:latest",
             tools_used=["SynthesisNode"],
             relevant_output_ids=["synthesis_result"],
         )
         return state
 
     def _final_answer(self, state: WorkflowState) -> WorkflowState:
+        # Case 0: Deterministic document fact extraction
+        field = DocumentFactExtractor.detect_field(state.user_query)
 
+        if (
+            field
+            and state.retrieved_evidence
+            and any(
+                isinstance(item, dict) and item.get("content")
+                for item in state.retrieved_evidence
+            )
+        ):
+            result = DocumentFactExtractor.extract(
+                query=state.user_query,
+                evidence=state.retrieved_evidence,
+            )
+
+            if result.success:
+                state.document_fact_results.append(
+                    {
+                        "answer": result.answer,
+                        "evidence_id": result.evidence_id,
+                        "field": result.field,
+                        "method": "deterministic_document_fact_extraction",
+                    }
+                )
+
+                state.final_answer = result.answer
+
+                self._trace(
+                    state,
+                    node_name="document_fact_extraction",
+                    model_used="n/a",
+                    tools_used=["DocumentFactExtractor"],
+                    relevant_output_ids=[
+                        result.evidence_id
+                    ] if result.evidence_id else [],
+                )
+
+                return state
+            
         # Case 1: A synthesis result exists
         if state.synthesis_result:
             answer = state.synthesis_result.get("answer")
@@ -461,7 +568,7 @@ class WorkflowGraph:
                 self._trace(
                     state,
                     node_name="final_answer",
-                    model_used="qwen3",
+                    model_used="phi4-mini:latest",
                     tools_used=["answer_selection"],
                     relevant_output_ids=["final_answer"],
                 )
@@ -480,7 +587,7 @@ class WorkflowGraph:
                 self._trace(
                     state,
                     node_name="final_answer",
-                    model_used="qwen3",
+                    model_used="phi4-mini:latest",
                     tools_used=["answer_selection"],
                     relevant_output_ids=["final_answer"],
                 )
@@ -554,7 +661,7 @@ class WorkflowGraph:
         self._trace(
             state,
             node_name="verifier",
-            model_used="qwen3",
+            model_used="phi4-mini:latest",
             tools_used=["Verifier"],
             relevant_output_ids=[
                 "verification_1",
@@ -610,19 +717,12 @@ class WorkflowGraph:
             else []
         )
 
-        verification_evidence = []
-
-        verification_evidence.extend(
-            state.retrieved_evidence
-        )
-
-        verification_evidence.extend(
-            state.data_results
-        )
-
-        verification_evidence.extend(
-            state.vision_results
-        )
+        verification_evidence = [
+            *state.retrieved_evidence,
+            *state.data_results,
+            *state.code_results,
+            *state.vision_results,
+        ]
 
         repaired = RepairNode(
             max_attempts=self.max_repair_attempts,
@@ -649,7 +749,7 @@ class WorkflowGraph:
         self._trace(
             state,
             node_name="repair",
-            model_used="qwen3",
+            model_used="phi4-mini:latest",
             tools_used=["RepairNode"],
             relevant_output_ids=[
                 "repaired_answer"
@@ -780,6 +880,7 @@ class WorkflowGraph:
         self.graph.add_node("policy_router", self._policy_router)
         self.graph.add_node("execution_dispatch", self._execution_dispatch)
         self.graph.add_node("document_route", self._document_route)
+        self.graph.add_node("document_fact", self._document_fact_route)
         self.graph.add_node("vault_route", self._vault_route)
         self.graph.add_node("data_route", self._data_route)
         self.graph.add_node("vision_route", self._vision_route)
@@ -810,11 +911,23 @@ class WorkflowGraph:
                 "data": "data_route",
                 "vision": "vision_route",
                 "reasoning": "reasoning_route",
+                "document_fact": "document_fact",
                 "code_execution": "code_execution",
                 "aggregate_results": "aggregate_results",
             },
         )
-        self.graph.add_edge("document_route", "execution_dispatch")
+        self.graph.add_conditional_edges(
+            "document_route",
+            self._should_use_document_fact_extraction,
+            {
+                "document_fact": "document_fact",
+                "reasoning": "execution_dispatch",
+            },
+        )
+        self.graph.add_edge(
+            "document_fact",
+            "aggregate_results",
+        )
         self.graph.add_edge("data_route", "execution_dispatch")
         self.graph.add_edge("vision_route", "execution_dispatch")
         self.graph.add_edge("reasoning_route", "execution_dispatch")

@@ -16,10 +16,31 @@ class ReasoningNode:
         self.context_manager = ContextManager()
 
         self.model = ModelFactory.create(
-            "qwen",
+            "reasoning",
             telemetry=telemetry,
         )
+    @staticmethod
+    def _normalize_citations(answer: str, evidence_ids: list[str]) -> str:
+        """Normalize common LLM citation placeholders when exactly one
+        authoritative evidence ID exists.
+        """
+        if not answer or len(evidence_ids) != 1:
+            return answer
 
+        evidence_id = evidence_ids[0]
+
+        import re
+
+        placeholder_pattern = re.compile(
+            r"\[(?:evidence_id|evidence_001|exact_evidence_id)\]",
+            re.IGNORECASE,
+        )
+
+        return placeholder_pattern.sub(
+            f"[{evidence_id}]",
+            answer,
+        )
+    
     def run(
         self,
         user_query: str,
@@ -221,6 +242,24 @@ CONTENT:
                     f"[{evidence_id}] {content}"
                 )
 
+        for item in data_results:
+            if not isinstance(item, dict):
+                continue
+
+            evidence_id = item.get("evidence_id")
+
+            if not evidence_id:
+                continue
+
+            content = json.dumps(
+                item.get("result", item),
+                default=str,
+            )
+
+            evidence_context_parts.append(
+                f"[{evidence_id}] {content}"
+            )
+
         for item in code_results:
             if not isinstance(item, dict):
                 continue
@@ -273,8 +312,15 @@ Do not make unsupported causal claims.
 
 Use the authoritative evidence to answer the request.
 
-Evidence IDs are internal traceability metadata.
-NEVER expose evidence IDs or citation markers in the final answer.
+CITATION REQUIREMENTS:
+- You MUST cite authoritative evidence for factual claims.
+- Use the exact evidence ID supplied in AUTHORITATIVE EVIDENCE.
+- Citation format MUST be: [EXACT_EVIDENCE_ID]
+- Copy the evidence ID character-for-character.
+- NEVER invent, modify, abbreviate, or substitute an evidence ID.
+- NEVER use placeholders such as [evidence_001], [EVIDENCE_ID], [evidence_id], [source], or [citation].
+- Every factual answer based on authoritative evidence must include at least one exact evidence citation.
+- If multiple pieces of evidence support a claim, cite the relevant exact IDs.
 
 Do not output JSON.
 Do not output Python.
@@ -298,12 +344,30 @@ Return ONLY the final human-readable answer.
                 "You are SOVARA's grounded reasoning engine. "
                 "Use authoritative execution evidence for file, data, "
                 "and image claims. "
-                "Use authoritative evidence when answering. "
-                "Never expose internal evidence IDs or metadata. "
-                "Return only human-readable text."
+                "Use exact authoritative evidence IDs as citations. "
+                "Never invent or modify evidence IDs. "
+                "Return only human-readable text with valid evidence citations. "
             ),
             num_predict=2048,
             temperature=0.2,
+        )
+        authoritative_ids = []
+
+        for item in evidence:
+            if isinstance(item, dict) and item.get("evidence_id"):
+                authoritative_ids.append(str(item["evidence_id"]))
+
+        for item in data_results:
+            if isinstance(item, dict) and item.get("evidence_id"):
+                authoritative_ids.append(str(item["evidence_id"]))
+
+        for item in code_results:
+            if isinstance(item, dict) and item.get("evidence_id"):
+                authoritative_ids.append(str(item["evidence_id"]))
+
+        answer = self._normalize_citations(
+            answer,
+            authoritative_ids,
         )
 
         if not answer.strip():
@@ -321,3 +385,4 @@ Return ONLY the final human-readable answer.
             "vision_result_count": len(vision_results),
             "model_used": self.model.name,
         }
+

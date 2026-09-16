@@ -3,9 +3,27 @@ from __future__ import annotations
 from app.core.config import get_settings
 from app.models.base import BaseModelAdapter
 from app.models.gemma_adapter import GemmaAdapter
-from app.models.qwen_adapter import QwenAdapter
+from app.models.ollama_adapter import OllamaAdapter
 from app.models.qwen_coder_adapter import QwenCoderAdapter
 from app.services.execution_telemetry import ExecutionTelemetry
+
+
+class Phi4MiniAdapter(OllamaAdapter):
+    name = "phi4-mini"
+
+    DEFAULT_MODEL = "phi4-mini:latest"
+
+    def __init__(
+        self,
+        model_name: str | None = None,
+        base_url: str | None = None,
+        telemetry: ExecutionTelemetry | None = None,
+    ):
+        super().__init__(
+            model_name=model_name or self.DEFAULT_MODEL,
+            base_url=base_url,
+            telemetry=telemetry,
+        )
 
 
 class ModelFactory:
@@ -19,11 +37,11 @@ class ModelFactory:
 
         settings = get_settings()
 
-        if model_type == "qwen":
-            return QwenAdapter(
+        if model_type == "reasoning":
+            return Phi4MiniAdapter(
                 model_name=(
                     kwargs.get("model_name")
-                    or settings.qwen_model
+                    or "phi4-mini:latest"
                 ),
                 base_url=(
                     kwargs.get("base_url")

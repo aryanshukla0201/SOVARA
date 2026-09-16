@@ -17,10 +17,6 @@ class Settings(BaseModel):
         default_factory=lambda: os.getenv("MODEL_PROVIDER", "ollama")
     )
 
-    qwen_model: str = Field(
-        default_factory=lambda: os.getenv("QWEN_MODEL", "qwen3:4b")
-    )
-
     gemma_model: str = Field(
         default_factory=lambda: os.getenv("GEMMA_MODEL", "gemma3:latest")
     )

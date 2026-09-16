@@ -17,7 +17,7 @@ class SynthesisNode:
         self.context_manager = ContextManager()
 
         self.model = model or ModelFactory.create(
-            "qwen",
+            "reasoning",
             telemetry=telemetry,
         )
 
@@ -156,43 +156,60 @@ RULES:
 
 2. Use the authoritative evidence to support factual claims.
 
-3. Evidence IDs are internal traceability metadata.
+3. Evidence IDs are provenance identifiers supplied in the
+AUTHORITATIVE EVIDENCE section and may be used only as citation markers.
 
-4. NEVER expose evidence IDs, internal IDs, request IDs,
-execution IDs, or other internal metadata in the final answer.
+4. Every factual paragraph MUST contain at least one citation.
 
-5. Do NOT write citations such as [evidence_id] or [code_12345678].
+5. The ONLY valid citation format is:
+   [EXACT_EVIDENCE_ID]
 
-6. Return a clean human-readable answer without citation markers.
+   Replace EXACT_EVIDENCE_ID with the exact evidence_id supplied
+   in the AUTHORITATIVE EVIDENCE section.
 
-7. Preserve exact numerical values from the authoritative evidence.
+6. Copy evidence IDs character-for-character inside square brackets.
 
-8. Do NOT output JSON.
+7. NEVER invent, modify, abbreviate, or substitute an evidence ID.
 
-9. Do NOT output Python dictionaries.
+8. NEVER use citation formats such as:
+   [EVIDENCE_ID: data_test_ev_001]
+   [evidence_id]
+   [citation: data_test_ev_001]
+   [source]
 
-10. Do NOT output internal execution state.
+9. Internal IDs such as request IDs and execution IDs must never be
+included unless they are being used as an exact supplied evidence_id
+citation.
 
-11. Do NOT output evidence lists.
+7. NEVER use citation placeholders such as [evidence_id], [citation],
+[source], or [code_12345678].
 
-12. Do NOT explain the verification process.
+8. Preserve exact numerical values from the authoritative evidence.
 
-13. Return ONLY a clean human-readable final answer.
+9. Do NOT output JSON.
 
-14. If the evidence cannot establish a claim, explicitly state that
+10 . Do NOT output Python dictionaries.
+
+11. Do NOT output internal execution state.
+
+12. Do NOT output evidence lists.
+
+13. Do NOT explain the verification process.
+
+14 . Return ONLY a clean human-readable final answer.
+
+15. If the evidence cannot establish a claim, explicitly state that
 the evidence does not establish it.
-
-15. Do not make unsupported causal claims.
 
 16. Preserve exact numerical values from evidence.
 
-17. Every paragraph containing factual information must contain
-at least one valid citation.
-
-18. When a highly relevant evidence item directly answers the question,
+17. When a highly relevant evidence item directly answers the question,
 do not substitute information from a lower-relevance unrelated item.
 
-19. If the top-ranked evidence clearly answers the question, prioritize it
+19. When a highly relevant evidence item directly answers the question,
+do not substitute information from a lower-relevance unrelated item.
+
+20. If the top-ranked evidence clearly answers the question, prioritize it
 over all unrelated lower-ranked evidence.
 
 Before returning the answer, internally verify that every citation
@@ -209,7 +226,9 @@ Return ONLY the final answer.
                 "Do not allow unrelated evidence to override relevant evidence. "
                 "Return only a clean human-readable answer. "
                 "Use authoritative evidence to support the answer. "
-                "Never expose evidence IDs or internal metadata. "
+                "Use citations exactly as [EXACT_EVIDENCE_ID]. "
+                "Copy supplied evidence IDs character-for-character. "
+                "Never add labels such as EVIDENCE_ID: inside citations. "
                 "Return only clean human-readable text."
             ),
         )
@@ -222,3 +241,4 @@ Return ONLY the final answer.
             ],
             "confidence": 0.85,
         }
+

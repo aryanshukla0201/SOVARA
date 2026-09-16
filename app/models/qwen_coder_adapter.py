@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from app.models.qwen_adapter import QwenAdapter
+from app.models.ollama_adapter import OllamaAdapter
 
 
-class QwenCoderAdapter(QwenAdapter):
+class QwenCoderAdapter(OllamaAdapter):
+    name = "qwen2.5-coder"
+
     DEFAULT_MODEL = "qwen2.5-coder:7b-instruct"
 
     def __init__(
         self,
         model_name: str | None = None,
-        base_url: str = "http://127.0.0.1:11434",
+        base_url: str | None = None,
         telemetry=None,
     ):
         super().__init__(

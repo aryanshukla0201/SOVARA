@@ -11,18 +11,17 @@ from app.models.base import BaseModelAdapter
 from app.services.execution_telemetry import ExecutionTelemetry
 
 
-class QwenAdapter(BaseModelAdapter):
-    name = "qwen3"
+class OllamaAdapter(BaseModelAdapter):
+    name = "ollama"
 
     def __init__(
         self,
-        model_name: str | None = None,
+        model_name: str,
         base_url: str | None = None,
         telemetry: ExecutionTelemetry | None = None,
     ):
         settings = get_settings()
-
-        self.model_name = model_name or settings.qwen_model
+        self.model_name = model_name
         self.base_url = base_url or settings.ollama_base_url
         self.telemetry = telemetry
 
@@ -32,7 +31,6 @@ class QwenAdapter(BaseModelAdapter):
         system_prompt: str | None = None,
         **options: Any,
     ) -> str:
-
         payload = {
             "model": self.model_name,
             "prompt": prompt,
@@ -60,7 +58,10 @@ class QwenAdapter(BaseModelAdapter):
                 self.telemetry.record_llm_call(
                     model_name=self.model_name,
                     local=self.base_url.startswith(
-                        ("http://localhost", "http://127.0.0.1")
+                        (
+                            "http://localhost",
+                            "http://127.0.0.1",
+                        )
                     ),
                 )
 
@@ -69,19 +70,18 @@ class QwenAdapter(BaseModelAdapter):
                 json=payload,
                 timeout=120,
             )
-
             response.raise_for_status()
 
             data = response.json()
 
             response_text = data.get("response", "").strip()
 
-            # Remove explicit thinking tags if the model emits them.
+            # Remove explicit thinking tags if a model emits them.
             response_text = re.sub(
                 r"<think>.*?</think>",
                 "",
                 response_text,
-                flags=re.DOTALL,
+                flags=re.DOTALL | re.IGNORECASE,
             ).strip()
 
             return response_text
@@ -110,7 +110,6 @@ class QwenAdapter(BaseModelAdapter):
         system_prompt: str | None = None,
         **options: Any,
     ) -> dict[str, Any]:
-
         structured_prompt = f"""
 {prompt}
 
@@ -131,28 +130,29 @@ Do not include <think> tags.
             r"<think>.*?</think>",
             "",
             raw,
-            flags=re.DOTALL,
+            flags=re.DOTALL | re.IGNORECASE,
         ).strip()
 
         try:
             return json.loads(raw)
 
         except json.JSONDecodeError:
+            # Extract the outermost JSON object if the model
+            # accidentally adds surrounding text.
+            start = raw.find("{")
+            end = raw.rfind("}")
 
-            match = re.search(
-                r"\{.*\}",
-                raw,
-                flags=re.DOTALL,
-            )
+            if start != -1 and end > start:
+                candidate = raw[start : end + 1]
 
-            if match:
                 try:
-                    return json.loads(match.group(0))
+                    return json.loads(candidate)
                 except json.JSONDecodeError:
                     pass
 
             raise RuntimeError(
-                "Qwen returned invalid structured JSON."
+                f"Model '{self.model_name}' returned "
+                "invalid structured JSON."
             )
 
     def analyze_image(
@@ -162,5 +162,6 @@ Do not include <think> tags.
         **kwargs: Any,
     ) -> dict[str, Any]:
         raise NotImplementedError(
-            "QwenAdapter does not currently support direct image analysis."
+            f"{self.__class__.__name__} does not currently "
+            "support direct image analysis."
         )

@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from app.models.qwen_adapter import QwenAdapter
+from app.models.model_factory import ModelFactory
 
 
 class CitationValidator:
@@ -129,8 +129,9 @@ Requirements:
 - Return only the repaired answer.
 """
 
-        adapter = QwenAdapter(
-            telemetry=self.telemetry
+        adapter = ModelFactory.create(
+            "reasoning",
+            telemetry=self.telemetry,
         )
 
         repaired_answer = adapter.generate(

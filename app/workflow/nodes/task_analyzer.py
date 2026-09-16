@@ -26,7 +26,7 @@ class TaskAnalyzer:
     }
 
     def __init__(self, model=None, telemetry: ExecutionTelemetry | None = None):
-        self.model = model or ModelFactory.create("qwen", telemetry=telemetry)
+        self.model = model or ModelFactory.create("reasoning", telemetry=telemetry)
 
     def analyze(
         self,
@@ -435,3 +435,4 @@ Example:
         task.task_type = intent
 
         return task
+

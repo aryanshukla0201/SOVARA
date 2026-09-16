@@ -276,7 +276,7 @@ if analyze:
 
     model_cols = st.columns(2)
 
-    reasoning_model = "Qwen3 4B"
+    reasoning_model = "Phi-4 Mini"
     vision_model = "Gemma 3 4B"
 
     with model_cols[0]:

@@ -3,7 +3,6 @@ from __future__ import annotations
 import numbers
 import re
 from typing import Any
-from unittest import result
 
 
 class NumericValidator:
@@ -42,11 +41,11 @@ class NumericValidator:
         itself is what we compare.
         """
         matches = re.findall(
-            r"(?<![\w.])-?\d+(?:\.\d+)?",
+            r"(?<![\w.])-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|(?<![\w.])-?\d+(?:\.\d+)?",
             answer,
         )
 
-        return [float(value) for value in matches]
+        return [float(value.replace(",", "")) for value in matches]
 
     def validate_data_result(
         self,
@@ -55,7 +54,13 @@ class NumericValidator:
         tolerance: float = 0.01,
     ) -> dict[str, Any]:
 
-        result = data_result.get("result", {})
+        # DataNode/CSVAnalyzer results are stored directly under
+        # the result dictionary. Support the older wrapped schema
+        # as well for backward compatibility.
+        if isinstance(data_result.get("result"), dict):
+            result = data_result["result"]
+        else:
+            result = data_result
 
         if not isinstance(result, dict):
             return {
@@ -65,6 +70,59 @@ class NumericValidator:
             }
 
         analysis_type = result.get("analysis_type")
+
+        # --------------------------------------------------
+        # Compound analysis
+        # --------------------------------------------------
+
+        if analysis_type == "compound":
+            analyses = result.get("analyses", [])
+
+            if not isinstance(analyses, list) or not analyses:
+                return {
+                    "valid": True,
+                    "checked": False,
+                    "reason": "compound data result contains no analyses",
+                }
+
+            results = []
+
+            for analysis in analyses:
+                if not isinstance(analysis, dict):
+                    continue
+
+                validation = self.validate_data_result(
+                    answer,
+                    analysis,
+                    tolerance,
+                )
+
+                results.append(validation)
+
+            checked_results = [
+                item for item in results
+                if item.get("checked")
+            ]
+
+            if not checked_results:
+                return {
+                    "valid": True,
+                    "checked": False,
+                    "reason": "compound result contains no supported numeric analyses",
+                }
+
+            return {
+                "valid": all(
+                    item["valid"]
+                    for item in checked_results
+                ),
+                "checked": True,
+                "checks": checked_results,
+            }
+
+        # --------------------------------------------------
+        # Single deterministic analysis
+        # --------------------------------------------------
 
         expected_fields = {
             "trend_analysis": [
@@ -84,7 +142,10 @@ class NumericValidator:
             return {
                 "valid": True,
                 "checked": False,
-                "reason": f"numeric validation not implemented for {analysis_type}",
+                "reason": (
+                    f"numeric validation not implemented "
+                    f"for {analysis_type}"
+                ),
             }
 
         expected_values = {
@@ -98,7 +159,10 @@ class NumericValidator:
             return {
                 "valid": True,
                 "checked": False,
-                "reason": "answer makes no numeric claims about this data result",
+                "reason": (
+                    "answer makes no numeric claims "
+                    "about this data result"
+                ),
                 "expected": expected_values,
                 "reported_numbers": [],
             }
@@ -107,6 +171,7 @@ class NumericValidator:
             expected: float,
             reported_numbers: list[float],
         ) -> bool:
+
             if expected is None:
                 return True
 

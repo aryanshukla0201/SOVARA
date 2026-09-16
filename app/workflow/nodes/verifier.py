@@ -36,11 +36,11 @@ class Verifier:
         # Citations are internal provenance metadata and are not
         # required in the user-facing final answer.
         #
-        # Validate citations only when the answer explicitly contains
-        # citation markers. This preserves citation checking for
-        # grounded answers while allowing clean final responses.
+        # Evidence-backed answers must contain valid citations.
+        # If evidence exists, at least one citation is required.
+        # If no evidence exists, citations are not required.
 
-        if "[" in answer and "]" in answer:
+        if evidence_ids:
             if not self.citation_validator.validate(
                 answer,
                 evidence_ids,
