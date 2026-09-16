@@ -1,0 +1,150 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-display: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: #08090a;
+  --color-foreground: #eceae4;
+  --color-card: #101213;
+  --color-card-foreground: #eceae4;
+  --color-popover: #141718;
+  --color-popover-foreground: #eceae4;
+  --color-primary: #d4d9d4;
+  --color-primary-foreground: #0c0e0d;
+  --color-secondary: #1a1e1c;
+  --color-secondary-foreground: #eceae4;
+  --color-muted: #1a1e1c;
+  --color-muted-foreground: #8b908c;
+  --color-accent: #222826;
+  --color-accent-foreground: #eceae4;
+  --color-destructive: #c17a72;
+  --color-destructive-foreground: #eceae4;
+  --color-border: #2a2e2c;
+  --color-input: #2a2e2c;
+  --color-ring: #d4d9d4;
+  --color-elevated: #171a1c;
+  --color-faint: #6a706c;
+  --color-ok: #8fad98;
+  --color-ok-foreground: #0c0e0d;
+  --color-warn: #c4a574;
+  --color-crit: #c17a72;
+  --color-paper: #d7d2c4;
+  --color-ink: #1c1a16;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.75rem;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100dvh;
+    background: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-primary) 28%, transparent);
+    color: var(--color-foreground);
+  }
+}
+
+@utility crop-corner {
+  position: relative;
+}
+
+@keyframes led-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes tape-shift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes scanline {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(400%);
+  }
+}
+
+.led-ok {
+  animation: led-breathe 2.8s ease-in-out infinite;
+}
+
+.tape-marquee {
+  animation: tape-shift 28s linear infinite;
+}
+
+.grid-drawing {
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--color-foreground) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-foreground) 5%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 48px 48px;
+  background-position: -1px -1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .led-ok,
+  .tape-marquee {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

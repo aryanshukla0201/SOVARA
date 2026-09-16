@@ -1,0 +1,28 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "pnpm tsc",
+    "db:migrate": "pnpm tsc && node dist/database/migrate.js",
+    "test:e2e": "pnpm tsc && node --test test/unit/authorization.test.mjs test/unit/organizations.test.mjs test/unit/users.test.mjs test/unit/memberships.test.mjs test/unit/hierarchy.test.mjs test/unit/assignments.test.mjs test/unit/application-identity.test.mjs test/unit/context.test.mjs test/unit/session-store.test.mjs test/e2e/auth.e2e.test.mjs"
+  },
+
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.3",
+  "dependencies": {
+    "@types/dotenv": "^8.2.3",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.5.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jose": "^6.2.9",
+    "pg": "^8.16.3",
+    "typescript": "^7.0.2"
+  }
+}

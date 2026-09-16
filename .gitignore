@@ -54,3 +54,4 @@ data/test/*.jpeg
 # Local workflow test scripts/results
 *_workflow_result.json
 *_result.json
+.vercel/
