@@ -61,6 +61,17 @@ class WorkflowGraph:
             }
         )
 
+    @staticmethod
+    def _model_name(model) -> str:
+        if model is None:
+            return "n/a"
+
+        return getattr(
+            model,
+            "model_name",
+            getattr(model, "name", "unknown"),
+        )
+
     def _input_processor(self, state: WorkflowState) -> WorkflowState:
         if state.user_query:
             state.input_types = detect_input_modalities(state.user_query, [file.storage_path for file in state.uploaded_files])
@@ -80,7 +91,14 @@ class WorkflowGraph:
 
     def _task_analyzer(self, state: WorkflowState) -> WorkflowState:
         input_types = list(dict.fromkeys([key for key, value in state.input_types.items() if value]))
-        state.task_state = TaskAnalyzer(telemetry=self.telemetry).analyze(state.user_query, input_types)
+        task_analyzer = TaskAnalyzer(
+            telemetry=self.telemetry,
+        )
+
+        state.task_state = task_analyzer.analyze(
+            state.user_query,
+            input_types,
+        )
 
         print(
             "\n[TASK DEBUG]",
@@ -95,7 +113,7 @@ class WorkflowGraph:
         self._trace(
             state,
             node_name="task_analyzer",
-            model_used="phi4-mini:latest",
+            model_used=self._model_name(task_analyzer.model),
             tools_used=["TaskAnalyzer"],
             relevant_output_ids=["task_1"],
         )
@@ -177,7 +195,7 @@ class WorkflowGraph:
             return "document_fact"
 
         return "reasoning"
-    
+
     def _document_route(self, state: WorkflowState) -> WorkflowState:
         document_node = DocumentNode(
             retriever=self.knowledge_vault.retriever
@@ -284,9 +302,10 @@ class WorkflowGraph:
             if file_record.file_type != "image":
                 continue
 
-            result = VisionNode(
+            vision_node = VisionNode(
                 telemetry=self.telemetry
-            ).run(
+            )
+            result = vision_node.run(
                 file_record.storage_path,
                 state.user_query
             )
@@ -315,7 +334,7 @@ class WorkflowGraph:
             self._trace(
                 state,
                 node_name="vision_route",
-                model_used="gemma3:4b-it-qat",
+                model_used=self._model_name(vision_node.model),
                 tools_used=["VisionAnalyzer"],
                 relevant_output_ids=[
                     f"{file_record.file_id}_ev_{index:03d}"
@@ -334,9 +353,10 @@ class WorkflowGraph:
             if file.storage_path
         ]
 
-        result = CodePipeline(
+        code_pipeline = CodePipeline(
             telemetry=self.telemetry,
-        ).run(
+        )
+        result = code_pipeline.run(
             user_query=state.user_query,
             input_files=input_files,
         )
@@ -346,7 +366,7 @@ class WorkflowGraph:
         self._trace(
             state,
             node_name="code_execution",
-            model_used="qwen2.5-coder:7b-instruct",
+            model_used=self._model_name(code_pipeline.agent.model),
             tools_used=[
                 "CodePipeline",
                 "CodeAgent",
@@ -392,10 +412,14 @@ class WorkflowGraph:
             )
 
         return state
-    
+
     def _reasoning_route(self, state: WorkflowState) -> WorkflowState:
         self.telemetry.record_tool("ReasoningNode")
-        result = ReasoningNode(telemetry=self.telemetry).run(
+        reasoning_node = ReasoningNode(
+            telemetry=self.telemetry,
+        )
+
+        result = reasoning_node.run(
             user_query=state.user_query,
             evidence=state.retrieved_evidence,
             data_results=state.data_results,
@@ -409,7 +433,7 @@ class WorkflowGraph:
         self._trace(
             state,
             node_name="reasoning_route",
-            model_used="phi4-mini:latest",
+            model_used=self._model_name(reasoning_node.model),
             tools_used=["ReasoningNode"],
             relevant_output_ids=[
                 f"reasoning_{len(state.reasoning_results)}"
@@ -497,7 +521,11 @@ class WorkflowGraph:
         if not state.synthesis_required:
             return state
 
-        result = SynthesisNode(telemetry=self.telemetry).run(
+        synthesis_node = SynthesisNode(
+            telemetry=self.telemetry,
+        )
+
+        result = synthesis_node.run(
             state.user_query,
             state.retrieved_evidence,
             state.data_results,
@@ -511,7 +539,7 @@ class WorkflowGraph:
         self._trace(
             state,
             node_name="synthesis",
-            model_used="phi4-mini:latest",
+            model_used=self._model_name(synthesis_node.model),
             tools_used=["SynthesisNode"],
             relevant_output_ids=["synthesis_result"],
         )
@@ -557,7 +585,7 @@ class WorkflowGraph:
                 )
 
                 return state
-            
+
         # Case 1: A synthesis result exists
         if state.synthesis_result:
             answer = state.synthesis_result.get("answer")
@@ -568,7 +596,7 @@ class WorkflowGraph:
                 self._trace(
                     state,
                     node_name="final_answer",
-                    model_used="phi4-mini:latest",
+                    model_used="n/a",
                     tools_used=["answer_selection"],
                     relevant_output_ids=["final_answer"],
                 )
@@ -587,7 +615,7 @@ class WorkflowGraph:
                 self._trace(
                     state,
                     node_name="final_answer",
-                    model_used="phi4-mini:latest",
+                    model_used="n/a",
                     tools_used=["answer_selection"],
                     relevant_output_ids=["final_answer"],
                 )
@@ -637,7 +665,9 @@ class WorkflowGraph:
             },
         }
 
-        verification = Verifier().verify(
+        verifier = Verifier()
+
+        verification = verifier.verify(
             answer,
             verification_evidence,
             report,
@@ -661,7 +691,7 @@ class WorkflowGraph:
         self._trace(
             state,
             node_name="verifier",
-            model_used="phi4-mini:latest",
+            model_used="n/a",
             tools_used=["Verifier"],
             relevant_output_ids=[
                 "verification_1",
@@ -724,10 +754,12 @@ class WorkflowGraph:
             *state.vision_results,
         ]
 
-        repaired = RepairNode(
+        repair_node = RepairNode(
             max_attempts=self.max_repair_attempts,
-            telemetry=self.telemetry
-        ).repair(
+            telemetry=self.telemetry,
+        )
+
+        repaired = repair_node.repair(
             {
                 "final_answer": state.final_answer,
                 "synthesis_result": state.synthesis_result,
@@ -749,7 +781,7 @@ class WorkflowGraph:
         self._trace(
             state,
             node_name="repair",
-            model_used="phi4-mini:latest",
+            model_used=self._model_name(repair_node.model),
             tools_used=["RepairNode"],
             relevant_output_ids=[
                 "repaired_answer"
@@ -873,7 +905,7 @@ class WorkflowGraph:
         )
 
         return state
-    
+
     def build(self):
         self.graph.add_node("input_processor", self._input_processor)
         self.graph.add_node("task_analyzer", self._task_analyzer)
