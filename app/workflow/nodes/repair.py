@@ -3,8 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from app.models.model_factory import ModelFactory
-
+from app.models.gateway import ModelGateway
 
 class CitationValidator:
     def validate(
@@ -129,10 +128,11 @@ Requirements:
 - Return only the repaired answer.
 """
 
-        adapter = ModelFactory.create(
-            "reasoning",
-            telemetry=self.telemetry,
-        )
+        self.model = ModelGateway(
+            telemetry=self.telemetry
+        ).resolve("reasoning")
+
+        adapter = self.model
 
         repaired_answer = adapter.generate(
             prompt,

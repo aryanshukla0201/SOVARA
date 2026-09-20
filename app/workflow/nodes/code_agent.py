@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from app.models.model_factory import ModelFactory
+from app.models.gateway import ModelGateway
 from app.workflow.nodes.code_sanitizer import CodeSanitizer
 from app.workflow.nodes.code_validator import CodeValidator
 from app.services.execution_telemetry import ExecutionTelemetry
@@ -16,10 +16,9 @@ class CodeAgent:
     ):
         self.telemetry = telemetry
 
-        self.model = model or ModelFactory.create(
-            "qwen_coder",
+        self.model = model or ModelGateway(
             telemetry=telemetry,
-        )
+        ).resolve("code")
 
     def generate(
         self,
@@ -88,7 +87,11 @@ RULES:
                 "success": False,
                 "code": generated_code,
                 "evidence_type": "generated_code",
-                "model_used": "qwen2.5-coder:7b-instruct",
+                "model_used": getattr(
+                    self.model,
+                    "model_name",
+                    self.model.name,
+                ),
                 "validation_error": validation["error"],
             }
 
@@ -96,7 +99,11 @@ RULES:
             "success": bool(generated_code and generated_code.strip()),
             "code": generated_code.strip(),
             "evidence_type": "generated_code",
-            "model_used": "qwen2.5-coder:7b-instruct",
+            "model_used": getattr(
+                self.model,
+                "model_name",
+                self.model.name,
+            ),
         }
 
     def repair(
@@ -167,7 +174,11 @@ RULES:
                 "success": False,
                 "code": generated_code,
                 "evidence_type": "repaired_code",
-                "model_used": "qwen2.5-coder:7b-instruct",
+                "model_used": getattr(
+                    self.model,
+                    "model_name",
+                    self.model.name,
+                ),
                 "validation_error": validation["error"],
             }
 
@@ -175,5 +186,9 @@ RULES:
             "success": bool(generated_code and generated_code.strip()),
             "code": generated_code.strip(),
             "evidence_type": "repaired_code",
-            "model_used": "qwen2.5-coder:7b-instruct",
+            "model_used": getattr(
+                self.model,
+                "model_name",
+                self.model.name,
+            ),
         }

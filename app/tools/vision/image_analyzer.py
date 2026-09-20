@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import os
 from typing import Any
+from app.core.config import get_settings
 
 import requests
 
@@ -12,12 +13,16 @@ from app.services.execution_telemetry import ExecutionTelemetry
 class VisionAnalyzer:
     def __init__(
         self,
-        model_name: str = "gemma3:4b-it-qat",
-        base_url: str = "http://localhost:11434",
+        model_name: str | None = None,
+        base_url: str | None = None,
         telemetry: ExecutionTelemetry | None = None,
     ):
-        self.model_name = model_name
-        self.base_url = base_url.rstrip("/")
+        settings = get_settings()
+
+        self.model_name = model_name or settings.gemma_model
+        self.base_url = (
+            base_url or settings.ollama_base_url
+        ).rstrip("/")
         self.telemetry = telemetry
 
     def analyze(
