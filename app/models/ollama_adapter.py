@@ -9,6 +9,7 @@ import requests
 from app.core.config import get_settings
 from app.models.base import BaseModelAdapter
 from app.services.execution_telemetry import ExecutionTelemetry
+from app.governance.budget import BudgetExceededError, ResourceBudgetGovernor
 
 
 class OllamaAdapter(BaseModelAdapter):
@@ -20,12 +21,14 @@ class OllamaAdapter(BaseModelAdapter):
         base_url: str | None = None,
         telemetry: ExecutionTelemetry | None = None,
         performance_callback: Callable[..., None] | None = None,
+        budget_governor: ResourceBudgetGovernor | None = None,
     ):
         settings = get_settings()
         self.model_name = model_name
         self.base_url = base_url or settings.ollama_base_url
         self.telemetry = telemetry
         self.performance_callback = performance_callback
+        self.budget_governor = budget_governor
 
     def _call_ollama(
         self,
@@ -33,6 +36,29 @@ class OllamaAdapter(BaseModelAdapter):
         system_prompt: str | None = None,
         **options: Any,
     ) -> str:
+        if self.budget_governor is not None:
+            self.budget_governor.reserve_llm_call()
+
+            requested_tokens = int(
+                options.get("num_predict", 2048)
+            )
+
+            remaining = self.budget_governor.remaining(
+                "generated_tokens"
+            )
+
+            if (
+                remaining is not None
+                and requested_tokens > remaining
+            ):
+                self.budget_governor.release("llm_calls")
+                raise BudgetExceededError(
+                    "generated_tokens",
+                    self.budget_governor.budget.max_generated_tokens,
+                    self.budget_governor.usage.generated_tokens,
+                    requested_tokens,
+                )
+
         payload = {
             "model": self.model_name,
             "prompt": prompt,
@@ -75,6 +101,13 @@ class OllamaAdapter(BaseModelAdapter):
             response.raise_for_status()
 
             data = response.json()
+
+            eval_count = int(data.get("eval_count", 0) or 0)
+
+            if self.budget_governor is not None:
+                self.budget_governor.reserve_generated_tokens(
+                    eval_count
+                )
 
             response_text = data.get("response", "").strip()
 

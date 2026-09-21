@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.untrusted_content import UntrustedContentBoundary
+
 
 class EvidenceNormalizer:
     @staticmethod
@@ -42,30 +44,32 @@ class EvidenceNormalizer:
                 else:
                     evidence_type = "unknown"
 
+            normalized_item = {
+                "evidence_id": str(evidence_id),
+                "source_file_id": item.get("source_file_id"),
+                "source_filename": (
+                    item.get("source_filename")
+                    or item.get("filename")
+                    or item.get("source_file")
+                ),
+                "evidence_type": str(evidence_type),
+                "content": str(content).strip(),
+                "confidence": item.get("confidence"),
+                "relevance_score": item.get("relevance_score"),
+                "page_number": item.get("page_number"),
+                "chunk_id": item.get("chunk_id"),
+                "retrieval_method": (
+                    item.get("retrieval_method")
+                    or "unknown"
+                ),
+                "ocr_used": bool(
+                    item.get("ocr_used", False)
+                    or item.get("retrieval_method") == "pdf_ocr"
+                ),
+            }
+
             normalized.append(
-                {
-                    "evidence_id": str(evidence_id),
-                    "source_file_id": item.get("source_file_id"),
-                    "source_filename": (
-                        item.get("source_filename")
-                        or item.get("filename")
-                        or item.get("source_file")
-                    ),
-                    "evidence_type": str(evidence_type),
-                    "content": str(content).strip(),
-                    "confidence": item.get("confidence"),
-                    "relevance_score": item.get("relevance_score"),
-                    "page_number": item.get("page_number"),
-                    "chunk_id": item.get("chunk_id"),
-                    "retrieval_method": (
-                        item.get("retrieval_method")
-                        or "unknown"
-                    ),
-                    "ocr_used": bool(
-                        item.get("ocr_used", False)
-                        or item.get("retrieval_method") == "pdf_ocr"
-                    ),
-                }
+                UntrustedContentBoundary.annotate(normalized_item)
             )
 
         return normalized

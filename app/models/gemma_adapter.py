@@ -9,6 +9,7 @@ import requests
 
 from app.core.config import get_settings
 from app.models.base import BaseModelAdapter
+from app.governance.budget import ResourceBudgetGovernor
 from app.services.execution_telemetry import ExecutionTelemetry
 
 
@@ -21,6 +22,7 @@ class GemmaAdapter(BaseModelAdapter):
         base_url: str | None = None,
         telemetry: ExecutionTelemetry | None = None,
         performance_callback: Callable[..., None] | None = None,
+        budget_governor: ResourceBudgetGovernor | None = None,
     ):
         settings = get_settings()
         self.model_name = model_name or settings.gemma_model
@@ -29,6 +31,7 @@ class GemmaAdapter(BaseModelAdapter):
         ).rstrip("/")
         self.telemetry = telemetry
         self.performance_callback = performance_callback
+        self.budget_governor = budget_governor
 
     def generate(
         self,
@@ -39,6 +42,26 @@ class GemmaAdapter(BaseModelAdapter):
         import time
 
         start_time = time.perf_counter()
+
+        if self.budget_governor is not None:
+            self.budget_governor.reserve_llm_call()
+
+            requested_tokens = int(kwargs.get("num_predict", 2048))
+            remaining = self.budget_governor.remaining("generated_tokens")
+
+            if (
+                remaining is not None
+                and requested_tokens > remaining
+            ):
+                self.budget_governor.release("llm_calls")
+                from app.governance.budget import BudgetExceededError
+
+                raise BudgetExceededError(
+                    "generated_tokens",
+                    self.budget_governor.budget.max_generated_tokens,
+                    self.budget_governor.usage.generated_tokens,
+                    requested_tokens,
+                )
 
         try:
             response = requests.post(
@@ -60,6 +83,11 @@ class GemmaAdapter(BaseModelAdapter):
 
             eval_duration_ns = data.get("eval_duration", 0) or 0
             eval_count = data.get("eval_count", 0) or 0
+
+            if self.budget_governor is not None:
+                self.budget_governor.reserve_generated_tokens(
+                    eval_count
+                )
 
             generation_tokens_per_second = None
 
