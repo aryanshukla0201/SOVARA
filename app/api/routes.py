@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
@@ -158,6 +160,89 @@ def run_multimodal_analysis(
 
     return response
 
+@router.post("/analyze/stream")
+async def analyze_stream(
+    user_query: str = Form(...),
+    files: list[UploadFile] | None = File(default=None),
+    requested_deliverable: str | None = Form(default=None),
+    conversation_id: str | None = Form(default=None),
+):
+    async def event_stream():
+        def sse(event: str, data: dict) -> str:
+            import json
+
+            return (
+                f"event: {event}\n"
+                f"data: {json.dumps(data, default=str)}\n\n"
+            )
+
+        yield sse(
+            "workflow",
+            {
+                "status": "started",
+                "message": "Analysis started",
+            },
+        )
+
+        yield sse(
+            "workflow",
+            {
+                "status": "processing",
+                "message": "Running verified workflow",
+            },
+        )
+
+        try:
+            result = await asyncio.to_thread(
+                run_multimodal_analysis,
+                user_query=user_query,
+                files=files,
+                requested_deliverable=requested_deliverable,
+                conversation_id=conversation_id,
+            )
+
+            yield sse(
+                "completed",
+                {
+                    "request_id": result.get("request_id"),
+                    "conversation_id": result.get("conversation_id"),
+                    "status": result.get("status"),
+                    "final_answer": result.get("final_answer"),
+                    "evidence": result.get("evidence", []),
+                    "verification_status": result.get(
+                        "verification_status"
+                    ),
+                    "verification_results": result.get(
+                        "verification_results", []
+                    ),
+                    "traceability": result.get("traceability", {}),
+                    "execution_telemetry": result.get(
+                        "execution_telemetry", {}
+                    ),
+                    "generated_deliverables": result.get(
+                        "generated_deliverables", []
+                    ),
+                },
+            )
+
+        except Exception as exc:
+            yield sse(
+                "error",
+                {
+                    "status": "failed",
+                    "error": str(exc),
+                },
+            )
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 @router.post("/analyze")
 async def analyze(

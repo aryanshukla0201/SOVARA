@@ -3,12 +3,13 @@ from __future__ import annotations
 import base64
 import json
 import os
-from typing import Any
+from typing import Any, Callable
 
 import requests
 
 from app.core.config import get_settings
 from app.models.base import BaseModelAdapter
+from app.services.execution_telemetry import ExecutionTelemetry
 
 
 class GemmaAdapter(BaseModelAdapter):
@@ -18,12 +19,16 @@ class GemmaAdapter(BaseModelAdapter):
         self,
         model_name: str | None = None,
         base_url: str | None = None,
+        telemetry: ExecutionTelemetry | None = None,
+        performance_callback: Callable[..., None] | None = None,
     ):
         settings = get_settings()
         self.model_name = model_name or settings.gemma_model
         self.base_url = (
             base_url or settings.ollama_base_url
         ).rstrip("/")
+        self.telemetry = telemetry
+        self.performance_callback = performance_callback
 
     def generate(
         self,
@@ -31,6 +36,10 @@ class GemmaAdapter(BaseModelAdapter):
         system_prompt: str | None = None,
         **kwargs: Any,
     ) -> str:
+        import time
+
+        start_time = time.perf_counter()
+
         try:
             response = requests.post(
                 f"{self.base_url}/api/generate",
@@ -43,9 +52,82 @@ class GemmaAdapter(BaseModelAdapter):
                 timeout=30,
             )
             response.raise_for_status()
+
             data = response.json()
-            return data.get("response", "")
+            result = data.get("response", "")
+
+            duration_ms = (time.perf_counter() - start_time) * 1000
+
+            eval_duration_ns = data.get("eval_duration", 0) or 0
+            eval_count = data.get("eval_count", 0) or 0
+
+            generation_tokens_per_second = None
+
+            if eval_duration_ns > 0 and eval_count > 0:
+                generation_tokens_per_second = (
+                    eval_count
+                    / (eval_duration_ns / 1_000_000_000)
+                )
+
+            if self.performance_callback:
+                self.performance_callback(
+                    model_name=self.model_name,
+                    generation_tokens_per_second=generation_tokens_per_second,
+                    load_ms=(
+                        (data.get("load_duration", 0) or 0)
+                        / 1_000_000
+                    ),
+                )
+
+            if self.telemetry:
+                self.telemetry.record_llm_call(
+                    model_name=self.model_name,
+                    local=True,
+                    duration_ms=duration_ms,
+                    success=True,
+                    input_chars=len(prompt),
+                    output_chars=len(result),
+                    ollama_total_duration_ms=(
+                        (data.get("total_duration", 0) or 0)
+                        / 1_000_000
+                    ),
+                    ollama_load_duration_ms=(
+                        (data.get("load_duration", 0) or 0)
+                        / 1_000_000
+                    ),
+                    ollama_prompt_eval_duration_ms=(
+                        (data.get("prompt_eval_duration", 0) or 0)
+                        / 1_000_000
+                    ),
+                    ollama_eval_duration_ms=(
+                        (data.get("eval_duration", 0) or 0)
+                        / 1_000_000
+                    ),
+                    ollama_prompt_eval_count=data.get(
+                        "prompt_eval_count",
+                        0,
+                    ),
+                    ollama_eval_count=eval_count,
+                    ollama_generation_tokens_per_second=(
+                        generation_tokens_per_second
+                    ),
+                )
+
+            return result
+
         except Exception:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+
+            if self.telemetry:
+                self.telemetry.record_llm_call(
+                    model_name=self.model_name,
+                    local=True,
+                    duration_ms=duration_ms,
+                    success=False,
+                    input_chars=len(prompt),
+                    output_chars=0,
+                )
+
             return "Offline vision fallback response."
 
     def generate_structured(

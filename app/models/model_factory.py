@@ -6,6 +6,7 @@ from app.models.gemma_adapter import GemmaAdapter
 from app.models.ollama_adapter import OllamaAdapter
 from app.models.qwen_coder_adapter import QwenCoderAdapter
 from app.services.execution_telemetry import ExecutionTelemetry
+from typing import Callable
 
 
 class Phi4MiniAdapter(OllamaAdapter):
@@ -18,11 +19,13 @@ class Phi4MiniAdapter(OllamaAdapter):
         model_name: str | None = None,
         base_url: str | None = None,
         telemetry: ExecutionTelemetry | None = None,
+        performance_callback=None,
     ):
         super().__init__(
             model_name=model_name or self.DEFAULT_MODEL,
             base_url=base_url,
             telemetry=telemetry,
+            performance_callback=performance_callback,
         )
 
 
@@ -32,6 +35,7 @@ class ModelFactory:
     def create(
         model_type: str,
         telemetry: ExecutionTelemetry | None = None,
+        performance_callback: Callable[..., None] | None = None,
         **kwargs,
     ) -> BaseModelAdapter:
 
@@ -48,6 +52,7 @@ class ModelFactory:
                     or settings.ollama_base_url
                 ),
                 telemetry=telemetry,
+                performance_callback=performance_callback,
             )
 
         if model_type == "qwen_coder":
@@ -61,6 +66,7 @@ class ModelFactory:
                     or settings.ollama_base_url
                 ),
                 telemetry=telemetry,
+                performance_callback=performance_callback,
             )
 
         if model_type == "gemma":
@@ -73,6 +79,8 @@ class ModelFactory:
                     kwargs.get("base_url")
                     or settings.ollama_base_url
                 ),
+                telemetry=telemetry,
+                performance_callback=performance_callback,
             )
 
         raise ValueError(

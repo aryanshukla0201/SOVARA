@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from app.models.gateway import ModelGateway
+from app.models.response_budget import get_reasoning_budget
 from app.services.context_manager import ContextManager
 from app.services.execution_telemetry import ExecutionTelemetry
 
@@ -99,6 +100,7 @@ RULES:
                     "Do not require evidence or citations unless evidence "
                     "is explicitly supplied."
                 ),
+                num_predict=get_reasoning_budget(),
             )
 
             if not answer.strip():
@@ -348,7 +350,12 @@ Return ONLY the final human-readable answer.
                 "Never invent or modify evidence IDs. "
                 "Return only human-readable text with valid evidence citations. "
             ),
-            num_predict=2048,
+            num_predict=get_reasoning_budget(
+                evidence_count=len(evidence),
+                data_result_count=len(data_results),
+                code_result_count=len(code_results),
+                vision_result_count=len(vision_results),
+            ),
             temperature=0.2,
         )
 

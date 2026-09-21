@@ -13,6 +13,7 @@ class QwenCoderAdapter(OllamaAdapter):
         model_name: str | None = None,
         base_url: str | None = None,
         telemetry=None,
+        performance_callback=None,
     ):
         super().__init__(
             model_name=model_name or self.DEFAULT_MODEL,
