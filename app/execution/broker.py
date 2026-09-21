@@ -1,13 +1,18 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from app.execution.default_handlers import execute_csv_analyzer
 from app.execution.handlers import ToolExecutionHandlers
 from app.execution.policy import ExecutionPolicyEnforcer
 from app.execution.validation import ExecutionRequestValidator
+from app.governance.audit import AuditEvent, AuditEventType
+from app.governance.models import Policy
+from app.governance.observability import Observability
+from app.governance.policy import PolicyEngine
 from app.services.code_sandbox import CodeSandbox
 from app.tools.registry import ToolRegistry
 
@@ -16,6 +21,7 @@ from app.tools.registry import ToolRegistry
 class ExecutionRequest:
     tool_name: str
     arguments: dict[str, Any] = field(default_factory=dict)
+    task_id: str = ""
 
 
 @dataclass
@@ -36,12 +42,18 @@ class ExecutionBroker:
         validator: ExecutionRequestValidator | None = None,
         handlers: ToolExecutionHandlers | None = None,
         policy: ExecutionPolicyEnforcer | None = None,
+        governance_policy: Policy | None = None,
+        policy_engine: PolicyEngine | None = None,
+        observability: Observability | None = None,
     ) -> None:
         self.registry = registry or ToolRegistry()
         self.sandbox = sandbox or CodeSandbox()
         self.validator = validator or ExecutionRequestValidator()
         self.handlers = handlers or self._build_default_handlers()
         self.policy = policy or ExecutionPolicyEnforcer()
+        self.governance_policy = governance_policy or Policy()
+        self.policy_engine = policy_engine or PolicyEngine()
+        self.observability = observability or Observability()
 
     @staticmethod
     def _build_default_handlers() -> ToolExecutionHandlers:
@@ -54,6 +66,30 @@ class ExecutionBroker:
 
         return handlers
 
+    def _record(
+        self,
+        request: ExecutionRequest,
+        event_type: str,
+        *,
+        action: str = "",
+        decision: str = "",
+        reason: str = "",
+        tool_name: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        self.observability.record(
+            AuditEvent.create(
+                event_id=str(uuid4()),
+                task_id=request.task_id,
+                event_type=event_type,
+                tool_name=tool_name or request.tool_name,
+                action=action,
+                decision=decision,
+                reason=reason,
+                metadata=metadata,
+            )
+        )
+
     def execute(
         self,
         request: ExecutionRequest,
@@ -61,26 +97,75 @@ class ExecutionBroker:
         try:
             spec = self.registry.get(request.tool_name)
         except KeyError:
+            reason = f"Unknown tool: {request.tool_name}"
+            self._record(
+                request,
+                AuditEventType.POLICY_DENIED,
+                action="execute",
+                decision="deny",
+                reason=reason,
+            )
             return ExecutionResult(
                 tool_name=request.tool_name,
                 success=False,
-                error=f"Unknown tool: {request.tool_name}",
+                error=reason,
             )
+
+        governance_decision = self.policy_engine.evaluate(
+            spec,
+            self.governance_policy,
+        )
+
+        if not governance_decision.allowed:
+            self._record(
+                request,
+                AuditEventType.POLICY_DENIED,
+                action="execute",
+                decision="deny",
+                reason=governance_decision.reason,
+            )
+            return ExecutionResult(
+                tool_name=request.tool_name,
+                success=False,
+                error=governance_decision.reason,
+            )
+
+        self._record(
+            request,
+            AuditEventType.POLICY_ALLOWED,
+            action="execute",
+            decision="allow",
+            reason=governance_decision.reason,
+        )
 
         policy_errors = self.policy.validate(spec)
 
         if policy_errors:
+            error = "; ".join(policy_errors)
+            self._record(
+                request,
+                AuditEventType.EXECUTION_FAILED,
+                action="execute",
+                decision="deny",
+                reason=error,
+            )
             return ExecutionResult(
                 tool_name=request.tool_name,
                 success=False,
-                error="; ".join(policy_errors),
+                error=error,
             )
 
-        if request.tool_name == self.SANDBOX_TOOL:
-            return self._execute_sandbox(request)
+        self._record(
+            request,
+            AuditEventType.EXECUTION_STARTED,
+            action="execute",
+            decision="allow",
+        )
 
-        if not self.handlers.has_handler(request.tool_name):
-            return ExecutionResult(
+        if request.tool_name == self.SANDBOX_TOOL:
+            result = self._execute_sandbox(request)
+        elif not self.handlers.has_handler(request.tool_name):
+            result = ExecutionResult(
                 tool_name=request.tool_name,
                 success=False,
                 error=(
@@ -88,8 +173,22 @@ class ExecutionBroker:
                     f"tool: {request.tool_name}"
                 ),
             )
+        else:
+            result = self._execute_registered_tool(request)
 
-        return self._execute_registered_tool(request)
+        self._record(
+            request,
+            (
+                AuditEventType.EXECUTION_COMPLETED
+                if result.success
+                else AuditEventType.EXECUTION_FAILED
+            ),
+            action="execute",
+            decision="allow" if result.success else "deny",
+            reason=result.error,
+        )
+
+        return result
 
     def _execute_registered_tool(
         self,
