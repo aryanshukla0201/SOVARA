@@ -16,6 +16,11 @@ class AuditEventType:
     CHECKPOINT_CREATED = "checkpoint_created"
     RECOVERY_STARTED = "recovery_started"
     RECOVERY_COMPLETED = "recovery_completed"
+    APPROVAL_REQUESTED = "approval_requested"
+    APPROVAL_APPROVED = "approval_approved"
+    APPROVAL_REJECTED = "approval_rejected"
+    APPROVAL_EXPIRED = "approval_expired"
+    APPROVAL_CANCELLED = "approval_cancelled"
 
 
 @dataclass(frozen=True)
