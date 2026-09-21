@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from app.models.gateway import ModelGateway
+from app.models.response_budget import REPAIR_MAX_TOKENS
 
 class CitationValidator:
     def validate(
@@ -145,7 +146,7 @@ Requirements:
                 "Do not output <think> tags. "
                 "Every factual claim must use an exact supplied evidence ID."
             ),
-            num_predict=2048,
+            num_predict=REPAIR_MAX_TOKENS,
             temperature=0.1,
         )
 

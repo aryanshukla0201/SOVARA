@@ -13,6 +13,8 @@ class ModelDescriptor:
     capabilities: FrozenSet[str]
     priority: int = 100
     minimum_vram_gb: float = 0.0
+    expected_generation_tokens_per_second: float | None = None
+    expected_load_ms: float | None = None
 
 
 class ModelRegistry:
@@ -32,6 +34,8 @@ class ModelRegistry:
                 }),
                 priority=100,
                 minimum_vram_gb=4.0,
+                expected_generation_tokens_per_second=63.7,
+                expected_load_ms=5300.0,
             ),
             "qwen2.5-coder": ModelDescriptor(
                 key="qwen2.5-coder",
@@ -43,6 +47,8 @@ class ModelRegistry:
                 }),
                 priority=100,
                 minimum_vram_gb=6.0,
+                expected_generation_tokens_per_second=43.9,
+                expected_load_ms=13150.0,
             ),
             "gemma3": ModelDescriptor(
                 key="gemma3",
@@ -54,6 +60,8 @@ class ModelRegistry:
                 }),
                 priority=100,
                 minimum_vram_gb=4.0,
+                expected_generation_tokens_per_second=55.1,
+                expected_load_ms=8914.0,
             ),
         }
 

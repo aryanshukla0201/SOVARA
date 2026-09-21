@@ -43,8 +43,11 @@ class ExecutionVerifier:
         task_id: str,
         step: PlanStep,
         expected_output: Any = None,
+        *,
+        manage_state: bool = True,
     ) -> StepVerificationResult:
-        self.state_manager.start_step(task_id, step.step_id)
+        if manage_state:
+            self.state_manager.start_step(task_id, step.step_id)
 
         request = ExecutionRequest(
             task_id=task_id,

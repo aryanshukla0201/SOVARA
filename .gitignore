@@ -55,3 +55,5 @@ data/test/*.jpeg
 *_workflow_result.json
 *_result.json
 .vercel/
+
+data/*.db

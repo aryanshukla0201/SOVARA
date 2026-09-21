@@ -89,10 +89,10 @@ class Planner:
         return (
             "Create a structured execution plan for the user request.\n\n"
             f"USER REQUEST:\n{user_query}\n\n"
-            f"TASK STATE:\n{json.dumps(task_context, indent=2)}\n\n"
-            f"ADDITIONAL CONTEXT:\n{json.dumps(context, indent=2)}\n\n"
+            f"TASK STATE:\n{json.dumps(task_context, separators=(',', ':'), default=str)}\n\n"
+            f"ADDITIONAL CONTEXT:\n{json.dumps(context, separators=(',', ':'), default=str)}\n\n"
             "AVAILABLE TOOLS:\n"
-            f"{json.dumps(tools, indent=2)}\n\n"
+            f"{json.dumps(tools, separators=(',', ':'), default=str)}\n\n"
             "Rules:\n"
             "1. Use only tools from AVAILABLE TOOLS.\n"
             "2. Every step must have a unique step_id.\n"
