@@ -81,7 +81,12 @@ class ModelGateway:
 
         self._refresh_available_models()
 
-        return descriptor.model_name in self._available_model_names
+        configured_model = descriptor.model_name.split(":", 1)[0]
+
+        return any(
+            available_model.split(":", 1)[0] == configured_model
+            for available_model in self._available_model_names
+        )
 
     def refresh_availability(self) -> None:
         self._available_model_names = None
