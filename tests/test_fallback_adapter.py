@@ -109,3 +109,31 @@ def test_fallback_supports_structured_generation():
     )
 
     assert result == {"answer": "ok"}
+
+
+def test_fallback_does_not_bypass_budget_exceeded():
+    from app.governance.budget import BudgetExceededError
+
+    primary = Mock()
+    primary.name = "primary"
+    primary.generate.side_effect = BudgetExceededError(
+        "llm_calls",
+        1,
+        1,
+        1,
+    )
+
+    fallback = Mock()
+    fallback.name = "fallback"
+    fallback.generate.return_value = "fallback result"
+
+    adapter = FallbackModelAdapter(
+        primary=primary,
+        fallbacks=[fallback],
+    )
+
+    with pytest.raises(BudgetExceededError):
+        adapter.generate("hello")
+
+    primary.generate.assert_called_once()
+    fallback.generate.assert_not_called()

@@ -5,10 +5,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.evaluation.integration import ExecutionVerifier, StepVerificationResult
+from app.governance.audit import AuditEvent, AuditEventType
+from app.governance.budget import BudgetExceededError, ResourceBudgetGovernor
+from app.governance.observability import Observability
 from app.evaluation.models import VerificationResult, VerificationStatus
 from app.planner.models import Plan, PlanStep, PlanStepStatus, PlanStatus
 from app.planner.validator import PlanValidator
 from app.state.manager import AgentStateManager
+from app.services.run_trace import RunTrace
 
 
 @dataclass
@@ -35,6 +39,9 @@ class PlanExecutor:
         state_manager: AgentStateManager,
         validator: PlanValidator | None = None,
         max_workers: int = 4,
+        budget_governor: ResourceBudgetGovernor | None = None,
+        observability: Observability | None = None,
+        run_trace: RunTrace | None = None,
     ) -> None:
         if max_workers < 1:
             raise ValueError("max_workers must be >= 1")
@@ -43,6 +50,9 @@ class PlanExecutor:
         self.state_manager = state_manager
         self.validator = validator
         self.max_workers = max_workers
+        self.budget_governor = budget_governor
+        self.observability = observability
+        self.run_trace = run_trace
 
     def execute(
         self,
@@ -58,6 +68,13 @@ class PlanExecutor:
 
         plan.status = PlanStatus.RUNNING
         self.state_manager.start_task(task_id)
+
+        trace_id = None
+        if self.run_trace is not None:
+            trace_id = self.run_trace.start_run(
+                task_id,
+                plan.plan_id,
+            )
 
         expected_outputs = expected_outputs or {}
         step_by_id = {step.step_id: step for step in plan.steps}
@@ -94,12 +111,74 @@ class PlanExecutor:
                     ):
                         continue
 
+                    if self.budget_governor is not None:
+                        try:
+                            self.budget_governor.check_execution_time()
+
+                            # Parallel-task budget is a concurrency limit.
+                            # If all slots are occupied, leave this step
+                            # pending and retry after a running task completes.
+                            self.budget_governor.reserve_parallel_task()
+
+                            try:
+                                self.budget_governor.reserve_tool_call()
+                            except BudgetExceededError:
+                                self.budget_governor.release_parallel_task()
+                                raise
+
+                        except BudgetExceededError as exc:
+                            if exc.resource == "parallel_tasks":
+                                continue
+
+                            if self.observability is not None:
+                                self.observability.record(
+                                    AuditEvent.create(
+                                        event_id=f"budget-{task_id}-{step.step_id}",
+                                        task_id=task_id,
+                                        event_type=AuditEventType.BUDGET_EXCEEDED,
+                                        tool_name=step.tool_name,
+                                        action="budget_reservation",
+                                        decision="denied",
+                                        reason=str(exc),
+                                        metadata=exc.to_dict(),
+                                    )
+                                )
+
+                            result = self._budget_exception_result(
+                                step,
+                                exc,
+                            )
+                            results[step.step_id] = result
+                            step.status = PlanStepStatus.FAILED
+                            failed.add(step.step_id)
+
+                            self.state_manager.fail_step(
+                                task_id,
+                                step.step_id,
+                                error=result.verification.reason,
+                                observation={
+                                    "verification": result.verification.to_dict(),
+                                    "budget": exc.to_dict(),
+                                },
+                            )
+                            pending.remove(step_id)
+                            continue
                     self.state_manager.start_step(
                         task_id,
                         step.step_id,
                     )
                     step.status = PlanStepStatus.RUNNING
                     pending.remove(step_id)
+
+                    if self.run_trace is not None:
+                        self.run_trace.record_step_started(
+                            trace_id,
+                            step.step_id,
+                            step.tool_name,
+                            metadata={
+                                "depends_on": list(step.depends_on),
+                            },
+                        )
 
                     future = pool.submit(
                         self.verifier.execute_and_verify,
@@ -129,7 +208,59 @@ class PlanExecutor:
                         exc,
                     )
 
+                if self.budget_governor is not None:
+                    self.budget_governor.release_parallel_task()
+
+                    try:
+                        self.budget_governor.check_execution_time()
+                    except BudgetExceededError as exc:
+                        if self.observability is not None:
+                            self.observability.record(
+                                AuditEvent.create(
+                                    event_id=f"budget-{task_id}-{step.step_id}",
+                                    task_id=task_id,
+                                    event_type=AuditEventType.BUDGET_EXCEEDED,
+                                    tool_name=step.tool_name,
+                                    action="budget_check",
+                                    decision="denied",
+                                    reason=str(exc),
+                                    metadata=exc.to_dict(),
+                                )
+                            )
+
+                        result = self._budget_exception_result(
+                            step,
+                            exc,
+                        )
+                        step.status = PlanStepStatus.FAILED
+                        failed.add(step.step_id)
+
                 results[step.step_id] = result
+
+                if self.run_trace is not None:
+                    if result.verification.passed:
+                        self.run_trace.record_step_completed(
+                            trace_id,
+                            step.step_id,
+                            step.tool_name,
+                            metadata={
+                                "verification": (
+                                    result.verification.to_dict()
+                                ),
+                            },
+                        )
+                    else:
+                        self.run_trace.record_step_failed(
+                            trace_id,
+                            step.step_id,
+                            step.tool_name,
+                            error=result.verification.reason,
+                            metadata={
+                                "verification": (
+                                    result.verification.to_dict()
+                                ),
+                            },
+                        )
 
                 if result.verification.passed:
                     step.status = PlanStepStatus.COMPLETED
@@ -165,6 +296,12 @@ class PlanExecutor:
         else:
             plan.status = PlanStatus.COMPLETED
             self.state_manager.complete_task(task_id)
+
+        if self.run_trace is not None:
+            self.run_trace.finish_run(
+                trace_id,
+                plan.status.value,
+            )
 
         return PlanExecutionResult(
             plan_id=plan.plan_id,
@@ -207,6 +344,29 @@ class PlanExecutor:
                 step.status = PlanStepStatus.SKIPPED
                 skipped.add(step_id)
                 pending.remove(step_id)
+
+    @staticmethod
+    def _budget_exception_result(
+        step: PlanStep,
+        exc: BudgetExceededError,
+    ) -> StepVerificationResult:
+        verification = VerificationResult(
+            status=VerificationStatus.FAILED,
+            check=f"budget:{step.step_id}",
+            reason=str(exc),
+            details=exc.to_dict(),
+        )
+
+        return StepVerificationResult(
+            step_id=step.step_id,
+            execution_success=False,
+            verification=verification,
+            execution_result={
+                "error": str(exc),
+                "budget": exc.to_dict(),
+            },
+            state_updated=False,
+        )
 
     @staticmethod
     def _execution_exception_result(

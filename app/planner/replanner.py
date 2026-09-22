@@ -7,6 +7,7 @@ from app.models.gateway import ModelGateway
 from app.planner.models import Plan, PlanStep
 from app.planner.validator import PlanValidator
 from app.tools.registry import ToolRegistry
+from app.governance.budget import ResourceBudgetGovernor
 
 
 @dataclass
@@ -25,6 +26,7 @@ class Replanner:
         tool_registry: ToolRegistry | None = None,
         validator: PlanValidator | None = None,
         max_attempts: int = 3,
+        budget_governor: ResourceBudgetGovernor | None = None,
     ) -> None:
         if max_attempts < 1:
             raise ValueError("max_attempts must be at least 1.")
@@ -35,6 +37,11 @@ class Replanner:
             self.tool_registry
         )
         self.max_attempts = max_attempts
+        self.budget_governor = budget_governor
+        if budget_governor is not None:
+            self.model_gateway = model_gateway or ModelGateway(
+                budget_governor=budget_governor
+            )
 
     def replan(
         self,
@@ -56,6 +63,9 @@ class Replanner:
             if step.step_id not in completed
             and step.step_id != failure.failed_step_id
         ]
+
+        if self.budget_governor is not None:
+            self.budget_governor.reserve_repair_attempt()
 
         model = self.model_gateway.resolve("reasoning")
 

@@ -1,6 +1,6 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-from typing import Any, Iterable
+from typing import Any
 
 from app.state.evidence import EvidenceRecord
 
@@ -8,61 +8,107 @@ from app.state.evidence import EvidenceRecord
 class EvidenceSelector:
     def select(
         self,
-        candidates: Iterable[dict[str, Any]],
+        candidates: list[dict[str, Any]],
         top_k: int = 5,
     ) -> list[EvidenceRecord]:
         if top_k <= 0:
             return []
 
-        best_by_id: dict[str, dict[str, Any]] = {}
+        best: dict[str, dict[str, Any]] = {}
 
         for candidate in candidates:
-            evidence_id = candidate.get("evidence_id")
-
+            evidence_id = str(candidate.get("evidence_id", "")).strip()
             if not evidence_id:
                 continue
 
-            key = str(evidence_id)
+            score = float(
+                candidate.get(
+                    "rerank_score",
+                    candidate.get(
+                        "hybrid_score",
+                        candidate.get("score", 0.0),
+                    ),
+                )
+            )
 
-            score = self._score(candidate)
-
-            existing = best_by_id.get(key)
-
-            if existing is None or score > self._score(existing):
-                best_by_id[key] = dict(candidate)
+            existing = best.get(evidence_id)
+            if existing is None or score > float(
+                existing.get(
+                    "rerank_score",
+                    existing.get(
+                        "hybrid_score",
+                        existing.get("score", 0.0),
+                    ),
+                )
+            ):
+                best[evidence_id] = candidate
 
         ordered = sorted(
-            best_by_id.values(),
+            best.values(),
             key=lambda item: (
-                -self._score(item),
+                -float(
+                    item.get(
+                        "rerank_score",
+                        item.get(
+                            "hybrid_score",
+                            item.get("score", 0.0),
+                        ),
+                    )
+                ),
                 str(item.get("evidence_id", "")),
             ),
         )
 
-        selected: list[EvidenceRecord] = []
+        results: list[EvidenceRecord] = []
 
-        for item in ordered[:top_k]:
-            selected.append(
+        for candidate in ordered[:top_k]:
+            results.append(
                 EvidenceRecord(
-                    evidence_id=str(item["evidence_id"]),
-                    source_file_id=item.get("source_file_id"),
-                    source_filename=item.get("source_filename"),
-                    page_number=item.get("page_number"),
-                    chunk_id=item.get("chunk_id"),
-                    text=str(item.get("content", item.get("text", ""))),
-                    relevance_score=self._score(item),
-                    retrieval_method="hybrid_rag",
+                    evidence_id=str(candidate["evidence_id"]),
+                    source_file_id=candidate.get("source_file_id"),
+                    source_filename=candidate.get("source_filename"),
+                    page_number=candidate.get("page_number"),
+                    chunk_id=candidate.get("chunk_id"),
+                    document_id=candidate.get("document_id"),
+                    section=candidate.get("section"),
+                    text=str(candidate.get("content", candidate.get("text", ""))),
+                    relevance_score=float(
+                        candidate.get(
+                            "rerank_score",
+                            candidate.get(
+                                "hybrid_score",
+                                candidate.get("score", 0.0),
+                            ),
+                        )
+                    ),
+                    retrieval_score=(
+                        float(candidate["semantic_score"])
+                        if "semantic_score" in candidate
+                        else float(candidate.get("score", 0.0))
+                    ),
+                    rerank_score=(
+                        float(candidate["rerank_score"])
+                        if "rerank_score" in candidate
+                        else None
+                    ),
+                    retrieval_method=str(
+                        candidate.get("retrieval_method", "hybrid_rag")
+                    ),
+                    provenance={
+                        key: candidate[key]
+                        for key in (
+                            "source_file_id",
+                            "source_filename",
+                            "document_id",
+                            "chunk_id",
+                            "page_number",
+                            "section",
+                            "retrieval_method",
+                        )
+                        if candidate.get(key) is not None
+                    },
+                    citation_id=f"citation:{candidate['evidence_id']}",
                 )
             )
 
-        return selected
-
-    @staticmethod
-    def _score(candidate: dict[str, Any]) -> float:
-        if candidate.get("rerank_score") is not None:
-            return float(candidate["rerank_score"])
-
-        if candidate.get("hybrid_score") is not None:
-            return float(candidate["hybrid_score"])
-
-        return float(candidate.get("score", 0.0))
+        return results

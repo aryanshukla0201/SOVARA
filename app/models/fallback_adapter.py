@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from app.models.base import BaseModelAdapter
+from app.governance.budget import BudgetExceededError
 
 
 class ModelExecutionError(RuntimeError):
@@ -43,6 +44,8 @@ class FallbackModelAdapter(BaseModelAdapter):
         for index, adapter in enumerate(candidates):
             try:
                 return getattr(adapter, method)(*args, **kwargs)
+            except BudgetExceededError:
+                raise
             except RuntimeError as exc:
                 last_error = exc
 

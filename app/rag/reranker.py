@@ -4,7 +4,7 @@ from typing import Any
 
 
 class ScoreReranker:
-    """Deterministic reranker using existing retrieval signals."""
+    """Deterministic, replaceable local reranker boundary."""
 
     def __init__(
         self,
@@ -12,73 +12,53 @@ class ScoreReranker:
         keyword_weight: float = 0.25,
         semantic_weight: float = 0.15,
     ):
-        weights = (
-            hybrid_weight,
-            keyword_weight,
-            semantic_weight,
-        )
+        if (
+            hybrid_weight < 0
+            or keyword_weight < 0
+            or semantic_weight < 0
+        ):
+            raise ValueError("weights must be non-negative")
 
-        if any(weight < 0 for weight in weights):
-            raise ValueError("reranker weights must be non-negative")
+        total = hybrid_weight + keyword_weight + semantic_weight
+        if total <= 0:
+            raise ValueError("at least one weight must be positive")
 
-        if sum(weights) <= 0:
-            raise ValueError(
-                "at least one reranker weight must be positive"
-            )
-
-        self.hybrid_weight = hybrid_weight
-        self.keyword_weight = keyword_weight
-        self.semantic_weight = semantic_weight
+        self.hybrid_weight = hybrid_weight / total
+        self.keyword_weight = keyword_weight / total
+        self.semantic_weight = semantic_weight / total
 
     def rerank(
         self,
-        candidates: list[dict[str, Any]],
+        query: str | list[dict[str, Any]],
+        candidates: list[dict[str, Any]] | None = None,
         top_k: int = 5,
     ) -> list[dict[str, Any]]:
+        # Backward-compatible call shape: rerank(candidates, top_k=...).
+        if isinstance(query, list):
+            candidates = query
         if not candidates or top_k <= 0:
             return []
 
-        total_weight = (
-            self.hybrid_weight
-            + self.keyword_weight
-            + self.semantic_weight
-        )
-
         results = []
 
-        for candidate in candidates:
-            hybrid_score = float(
-                candidate.get("hybrid_score", 0.0)
-            )
-            keyword_score = float(
-                candidate.get("keyword_score", 0.0)
-            )
-            semantic_score = float(
-                candidate.get("semantic_score", 0.0)
-            )
+        for item in candidates:
+            result = dict(item)
+            hybrid = float(result.get("hybrid_score", 0.0))
+            keyword = float(result.get("keyword_score_normalized", result.get("keyword_score", 0.0)))
+            semantic = float(result.get("semantic_score_normalized", result.get("semantic_score", 0.0)))
 
-            rerank_score = (
-                (
-                    self.hybrid_weight * hybrid_score
-                    + self.keyword_weight * keyword_score
-                    + self.semantic_weight * semantic_score
-                )
-                / total_weight
-            )
-
-            result = dict(candidate)
             result["rerank_score"] = round(
-                rerank_score,
-                4,
+                self.hybrid_weight * hybrid
+                + self.keyword_weight * keyword
+                + self.semantic_weight * semantic,
+                6,
             )
-
             results.append(result)
 
         results.sort(
             key=lambda item: (
-                -float(item["rerank_score"]),
+                -float(item.get("rerank_score", 0.0)),
                 str(item.get("evidence_id", "")),
             )
         )
-
         return results[:top_k]

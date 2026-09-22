@@ -21,6 +21,7 @@ class AuditEventType:
     APPROVAL_REJECTED = "approval_rejected"
     APPROVAL_EXPIRED = "approval_expired"
     APPROVAL_CANCELLED = "approval_cancelled"
+    BUDGET_EXCEEDED = "budget_exceeded"
 
 
 @dataclass(frozen=True)

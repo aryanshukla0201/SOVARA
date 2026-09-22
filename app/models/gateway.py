@@ -12,6 +12,7 @@ from app.models.model_factory import ModelFactory
 from app.models.model_registry import ModelDescriptor, ModelRegistry
 from app.models.fallback_adapter import FallbackModelAdapter
 from app.services.execution_telemetry import ExecutionTelemetry
+from app.governance.budget import ResourceBudgetGovernor
 
 
 @dataclass
@@ -50,11 +51,13 @@ class ModelGateway:
         registry: ModelRegistry | None = None,
         telemetry: ExecutionTelemetry | None = None,
         hardware: HardwareProfile | None = None,
+        budget_governor: ResourceBudgetGovernor | None = None,
     ) -> None:
         self.registry = registry or ModelRegistry()
         self.telemetry = telemetry
         self.settings = get_settings()
         self.hardware = hardware or HardwareDetector.detect()
+        self.budget_governor = budget_governor
         self._available_model_names: set[str] | None = None
         self._performance: dict[str, ModelPerformance] = {}
 
@@ -263,6 +266,9 @@ class ModelGateway:
             "model_name": descriptor.model_name,
             "telemetry": telemetry,
         }
+
+        if self.budget_governor is not None:
+            factory_kwargs["budget_governor"] = self.budget_governor
 
         if telemetry is not None:
             factory_kwargs["performance_callback"] = (

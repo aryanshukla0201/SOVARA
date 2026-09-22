@@ -6,6 +6,7 @@ from app.models.gemma_adapter import GemmaAdapter
 from app.models.ollama_adapter import OllamaAdapter
 from app.models.qwen_coder_adapter import QwenCoderAdapter
 from app.services.execution_telemetry import ExecutionTelemetry
+from app.governance.budget import ResourceBudgetGovernor
 from typing import Callable
 
 
@@ -20,12 +21,14 @@ class Phi4MiniAdapter(OllamaAdapter):
         base_url: str | None = None,
         telemetry: ExecutionTelemetry | None = None,
         performance_callback=None,
+        budget_governor: ResourceBudgetGovernor | None = None,
     ):
         super().__init__(
             model_name=model_name or self.DEFAULT_MODEL,
             base_url=base_url,
             telemetry=telemetry,
             performance_callback=performance_callback,
+            budget_governor=budget_governor,
         )
 
 
@@ -36,6 +39,7 @@ class ModelFactory:
         model_type: str,
         telemetry: ExecutionTelemetry | None = None,
         performance_callback: Callable[..., None] | None = None,
+        budget_governor: ResourceBudgetGovernor | None = None,
         **kwargs,
     ) -> BaseModelAdapter:
 
@@ -53,6 +57,7 @@ class ModelFactory:
                 ),
                 telemetry=telemetry,
                 performance_callback=performance_callback,
+                budget_governor=budget_governor,
             )
 
         if model_type == "qwen_coder":
@@ -67,6 +72,7 @@ class ModelFactory:
                 ),
                 telemetry=telemetry,
                 performance_callback=performance_callback,
+                budget_governor=budget_governor,
             )
 
         if model_type == "gemma":
@@ -81,6 +87,7 @@ class ModelFactory:
                 ),
                 telemetry=telemetry,
                 performance_callback=performance_callback,
+                budget_governor=budget_governor,
             )
 
         raise ValueError(

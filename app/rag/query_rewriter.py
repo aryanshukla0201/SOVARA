@@ -1,18 +1,25 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 
 
 class QueryRewriter:
-    """Deterministic query normalization for RAG retrieval."""
+    """Deterministic retrieval-query normalization.
 
-    _WHITESPACE_RE = re.compile(r"\s+")
+    The original user query is never replaced at the orchestration layer.
+    Rewriting is retrieval-only and intentionally produces no new facts.
+    """
 
     def rewrite(self, query: str) -> str:
         if not query or not query.strip():
             return ""
+        return re.sub(r"\s+", " ", query.strip().lower())
 
-        normalized = query.strip().lower()
-        normalized = self._WHITESPACE_RE.sub(" ", normalized)
-
-        return normalized
+    def rewrite_queries(self, query: str) -> list[str]:
+        original = query.strip() if query else ""
+        if not original:
+            return []
+        rewritten = self.rewrite(original)
+        if not rewritten or rewritten == original:
+            return [original]
+        return [original, rewritten]
