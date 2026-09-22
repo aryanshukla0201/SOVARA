@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import asdict
+from app.state.execution_trace_projection import project_execution_trace
+
 import asyncio
 import uuid
 from pathlib import Path
@@ -190,6 +193,13 @@ def run_multimodal_analysis(
             ],
             "verification_status": result.verification_status,
             "verification_results": result.verification_results,
+            "stages": [
+                asdict(stage)
+                for stage in project_execution_trace(
+                    run_id=task_id,
+                    execution_trace=result.execution_trace,
+                    )
+            ],
             "traceability": result.execution_trace,
             "execution_telemetry": result.execution_telemetry,
             "generated_deliverables": result.generated_deliverables,
@@ -290,6 +300,7 @@ async def analyze_stream(
                     "generated_deliverables": result.get(
                         "generated_deliverables", []
                     ),
+                    "stages": result.get("stages", []),
                 },
             )
 

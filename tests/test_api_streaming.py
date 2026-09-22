@@ -20,6 +20,19 @@ def test_analyze_stream_emits_workflow_events_and_verified_completion():
         "traceability": {},
         "execution_telemetry": {},
         "generated_deliverables": [],
+        "stages": [
+            {
+                "stage_id": "task-test:understanding:1",
+                "run_id": "task-test",
+                "stage_type": "understanding",
+                "status": "completed",
+                "display_label": "Understanding request",
+                "sequence": 1,
+                "started_at": None,
+                "completed_at": None,
+                "metadata": {},
+            }
+        ],
     }
 
     with patch(
@@ -39,3 +52,5 @@ def test_analyze_stream_emits_workflow_events_and_verified_completion():
     assert "event: workflow" in body
     assert "event: completed" in body
     assert "Verified final answer" in body
+    assert "stages" in body
+    assert "Understanding request" in body
