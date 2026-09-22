@@ -259,6 +259,25 @@ class AgentStateManager:
             expected_version=previous_version,
         )
 
+    def update_metadata(
+        self,
+        task_id: str,
+        updates: dict,
+    ) -> AgentTaskState:
+        state = self.require_task(task_id)
+
+        if not isinstance(updates, dict):
+            raise ValueError("updates must be a dictionary")
+
+        previous_version = state.version
+        state.metadata.update(updates)
+        state.touch()
+
+        return self.store.save(
+            state,
+            expected_version=previous_version,
+        )
+
     def complete_task(
         self,
         task_id: str,
@@ -452,6 +471,29 @@ class AgentStateManager:
         recovered.touch()
 
         return self.store.save(recovered)
+
+    def find_task_by_metadata(
+        self,
+        key: str,
+        value: object,
+    ) -> AgentTaskState | None:
+        return self.store.find_by_metadata(
+            key,
+            value,
+        )
+
+    def update_run_metadata(
+        self,
+        task_id: str,
+        *,
+        run_id: str | None = None,
+        updates: dict | None = None,
+    ) -> AgentTaskState:
+        """Persist frontend-facing run metadata on the canonical task."""
+        self.require_task(task_id)
+        metadata = dict(updates or {})
+        metadata.setdefault("run_id", run_id or task_id)
+        return self.update_metadata(task_id, metadata)
 
     def list_tasks(
         self,

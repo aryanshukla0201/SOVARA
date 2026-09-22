@@ -231,3 +231,47 @@ def test_parallel_execution_respects_worker_bound():
     assert result.status.value == "completed"
     assert broker.calls == ["A", "B"]
     assert broker.max_active == 1
+
+
+def test_cancellation_stops_new_scheduling_and_skips_pending_steps():
+    from app.state.models import TaskStatus
+
+    class CancellationStateManager(FakeStateManager):
+        def __init__(self):
+            super().__init__()
+
+            class Task:
+                status = TaskStatus.RUNNING
+
+            self.task = Task()
+            self.tasks["task-1"] = self.task
+
+        def start_step(self, task_id, step_id):
+            super().start_step(task_id, step_id)
+
+            if step_id == "a":
+                self.task.status = TaskStatus.CANCELLED
+
+    broker = FakeBroker()
+    state = CancellationStateManager()
+
+    plan = make_plan(
+        [
+            PlanStep("a", "A"),
+            PlanStep("b", "B"),
+        ]
+    )
+
+    executor = PlanExecutor(
+        verifier=ExecutionVerifier(broker, state),
+        state_manager=state,
+        max_workers=1,
+    )
+
+    result = executor.execute(plan)
+
+    assert result.status.value == "cancelled"
+    assert broker.calls == ["A"]
+    assert "b" in result.skipped_steps
+    assert ("complete_task", "task-1") not in state.calls
+    assert ("fail_task", "task-1") not in state.calls

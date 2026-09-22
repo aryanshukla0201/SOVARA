@@ -154,6 +154,30 @@ class DurableStateStore:
                 json.loads(row["state_json"])
             )
 
+    def find_by_metadata(
+        self,
+        key: str,
+        value: object,
+    ) -> AgentTaskState | None:
+        with self._lock:
+            with self._connect() as connection:
+                rows = connection.execute(
+                    """
+                    SELECT state_json
+                    FROM agent_task_state
+                    ORDER BY updated_at DESC
+                    """
+                ).fetchall()
+
+        for row in rows:
+            state = AgentTaskState.from_dict(
+                json.loads(row["state_json"])
+            )
+            if state.metadata.get(key) == value:
+                return state
+
+        return None
+
     def delete(self, task_id: str) -> None:
         with self._lock:
             with self._connect() as connection:

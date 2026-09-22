@@ -29,11 +29,11 @@ Existing authorities:
 | Durable State | SQLite P6 state store with optimistic versioning | `app/state/store.py` | READY | Reuse | P6 |
 | Task Status | PENDING/RUNNING/COMPLETED/FAILED/CANCELLED | `app/state/models.py` | READY | Map to frontend lifecycle | P12 |
 | Semantic Lifecycle | Internal task and plan states exist | `app/state/models.py`, `app/planner/models.py` | PARTIAL | Add deterministic frontend mapping | P12 |
-| Semantic Stages | No dedicated frontend-safe stage abstraction found | `app/workflow/` | MISSING | Add thin semantic stage projection | P12 |
-| Execution Events | P6 state, P7 audit, P11 telemetry and Run Trace exist | `app/state/`, `app/governance/`, `app/services/` | PARTIAL | Define user-safe event projection | P12 |
+| Semantic Stages | Frontend-safe semantic stage projection exists | `app/state/semantic_stage.py`, `app/state/semantic_stage_projection.py`, `app/state/workflow_stage_mapping.py`, `app/state/execution_trace_projection.py` | READY | Reuse projection for frontend lifecycle/stage display | P12 |
+| Execution Events | User-safe execution event projection exists over Run Trace events | `app/state/execution_event_projection.py`, `app/services/run_trace.py` | READY | Reuse projection; do not expose internal execution details | P12 |
 | Run Trace | Ordered in-memory execution trace | `app/services/run_trace.py` | READY | Reuse; P6 remains durable authority | Existing |
 | Streaming | Existing SSE `/analyze/stream` with canonical `task_id`/`run_id`, event IDs, sequence numbers and safe failure messages | `app/api/routes.py` | PARTIAL | Add truthful semantic stage projection and lifecycle coverage without creating a second stream | P12 |
-| Streaming Replay | No replay/reconnect mechanism found | `app/api/routes.py` | MISSING | Add recovery/reconnect mechanism using existing durable task state; do not create a second stream | P12 |
+| Streaming Replay | Durable completed/failed result replay and existing-task reconnect protection use the canonical task state | `app/api/routes.py`, `app/state/manager.py`, `app/state/store.py` | READY | Reuse existing SSE contract; do not create a second stream | P12 |
 | Cancellation | Durable P6 cancellation exists; executor stops new scheduling and observes cancellation | `app/state/manager.py`, `app/planner/executor.py` | PARTIAL | Define/verify behavior for already-running work, races and terminal-state cancellation | P12 |
 | Planner Cancellation | Cooperative cancellation checks stop new scheduling and preserve durable CANCELLED state | `app/planner/executor.py` | PARTIAL | Active broker/verifier calls remain non-interruptible; verify race and parallel semantics | P12 |
 | P7 Governance | Permission/risk enforcement | `app/governance/policy.py` | READY | Reuse | P7 |
