@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from app.state.checkpoints import CheckpointStore
 from app.state.models import (
@@ -156,6 +156,17 @@ class AgentStateManager:
         observation: dict | None = None,
     ) -> AgentTaskState:
         state = self.require_task(task_id)
+
+        if state.status in {
+            TaskStatus.CANCELLED,
+            TaskStatus.COMPLETED,
+            TaskStatus.FAILED,
+        }:
+            raise ValueError(
+                f"Step cannot be completed for task status: "
+                f"{state.status.value}"
+            )
+
         step = state.steps.get(step_id)
 
         if step is None:
@@ -201,6 +212,17 @@ class AgentStateManager:
         observation: dict | None = None,
     ) -> AgentTaskState:
         state = self.require_task(task_id)
+
+        if state.status in {
+            TaskStatus.CANCELLED,
+            TaskStatus.COMPLETED,
+            TaskStatus.FAILED,
+        }:
+            raise ValueError(
+                f"Step cannot fail for task status: "
+                f"{state.status.value}"
+            )
+
         step = state.steps.get(step_id)
 
         if step is None:
@@ -243,6 +265,13 @@ class AgentStateManager:
     ) -> AgentTaskState:
         state = self.require_task(task_id)
 
+        if state.status == TaskStatus.CANCELLED:
+            raise ValueError("Cannot complete a cancelled task.")
+        if state.status == TaskStatus.COMPLETED:
+            raise ValueError("Task is already completed.")
+        if state.status == TaskStatus.FAILED:
+            raise ValueError("Cannot complete a failed task.")
+
         incomplete = [
             step_id
             for step_id, step in state.steps.items()
@@ -274,6 +303,13 @@ class AgentStateManager:
         task_id: str,
     ) -> AgentTaskState:
         state = self.require_task(task_id)
+
+        if state.status == TaskStatus.CANCELLED:
+            raise ValueError("Cannot fail a cancelled task.")
+        if state.status == TaskStatus.COMPLETED:
+            raise ValueError("Cannot fail a completed task.")
+        if state.status == TaskStatus.FAILED:
+            raise ValueError("Task is already failed.")
 
         previous_version = state.version
 
@@ -416,3 +452,9 @@ class AgentStateManager:
         recovered.touch()
 
         return self.store.save(recovered)
+
+    def list_tasks(
+        self,
+        limit: int = 50,
+    ) -> list[AgentTaskState]:
+        return self.store.list_tasks(limit=limit)

@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.state.workflow_state import WorkflowState
+from app.state.manager import AgentStateManager
 from app.services.conversation_service import ConversationService
 from app.services.knowledge_vault import KnowledgeVault
 from app.workflow.graph import WorkflowGraph
@@ -24,6 +25,7 @@ logger = get_logger("api.routes")
 analysis_store: dict[str, dict] = {}
 conversation_service = ConversationService()
 knowledge_vault = KnowledgeVault()
+state_manager = AgentStateManager()
 
 def run_multimodal_analysis(
     user_query: str,
@@ -42,6 +44,21 @@ def run_multimodal_analysis(
     """
 
     request_id = f"req_{uuid.uuid4().hex[:8]}"
+    task_id = f"task_{uuid.uuid4().hex}"
+
+    state_manager.create_task(
+        task_id=task_id,
+        goal=user_query,
+    )
+    state_manager.add_step(
+        task_id=task_id,
+        step_id="workflow_execution",
+    )
+    state_manager.start_task(task_id)
+    state_manager.start_step(
+        task_id=task_id,
+        step_id="workflow_execution",
+    )
 
     settings = get_settings()
     workspace_root = Path.cwd()
@@ -90,6 +107,7 @@ def run_multimodal_analysis(
 
     state = WorkflowState(
         request_id=request_id,
+        task_id=task_id,
         conversation_id=conversation_id,
         conversation_history=conversation_history,
         input_types=input_types,
@@ -111,7 +129,16 @@ def run_multimodal_analysis(
 
     workflow = workflow_builder.build()
 
-    final_state = workflow.invoke(state)
+    try:
+        final_state = workflow.invoke(state)
+    except Exception as exc:
+        state_manager.fail_step(
+            task_id,
+            "workflow_execution",
+            str(exc),
+        )
+        state_manager.fail_task(task_id)
+        raise
 
     # LangGraph should return WorkflowState, but allow
     # dictionary output as a defensive fallback.
@@ -120,6 +147,16 @@ def run_multimodal_analysis(
     else:
         result = WorkflowState.model_validate(final_state)
 
+    state_manager.complete_step(
+        task_id,
+        "workflow_execution",
+        result={
+            "verification_status": result.verification_status,
+            "generated_deliverables": result.generated_deliverables,
+        },
+    )
+
+    state_manager.complete_task(task_id)
 
     conversation_service.add_message(
         result.conversation_id,
@@ -140,6 +177,7 @@ def run_multimodal_analysis(
 
     response = {
             "request_id": result.request_id,
+            "task_id": result.task_id,
             "conversation_id": result.conversation_id,
             "status": "completed",
             "final_answer": result.final_answer,
@@ -159,6 +197,25 @@ def run_multimodal_analysis(
     analysis_store[result.request_id] = response
 
     return response
+
+@router.get("/tasks/{task_id}")
+def get_task_status(task_id: str) -> dict:
+    try:
+        task = state_manager.require_task(task_id)
+    except KeyError:
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found",
+        )
+
+    return {
+        "task_id": task.task_id,
+        "status": task.status.value,
+        "current_step_id": task.current_step_id,
+        "created_at": task.created_at,
+        "updated_at": task.updated_at,
+        "version": task.version,
+    }
 
 @router.post("/analyze/stream")
 async def analyze_stream(

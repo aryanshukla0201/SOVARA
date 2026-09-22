@@ -12,6 +12,7 @@ from app.evaluation.models import VerificationResult, VerificationStatus
 from app.planner.models import Plan, PlanStep, PlanStepStatus, PlanStatus
 from app.planner.validator import PlanValidator
 from app.state.manager import AgentStateManager
+from app.state.models import TaskStatus
 from app.services.run_trace import RunTrace
 
 
@@ -93,6 +94,15 @@ class PlanExecutor:
             futures: dict[Future[StepVerificationResult], PlanStep] = {}
 
             while pending or futures:
+                cancelled = self._is_cancelled(task_id)
+
+                if cancelled:
+                    for step_id in sorted(pending):
+                        step = step_by_id[step_id]
+                        step.status = PlanStepStatus.SKIPPED
+                        skipped.add(step_id)
+
+                    pending.clear()
                 self._mark_blocked_steps(
                     pending=pending,
                     step_by_id=step_by_id,
@@ -103,6 +113,13 @@ class PlanExecutor:
 
                 # Schedule each currently-ready step exactly once.
                 for step_id in sorted(list(pending)):
+                    if self._is_cancelled(task_id):
+                        for remaining_id in sorted(pending):
+                            remaining_step = step_by_id[remaining_id]
+                            remaining_step.status = PlanStepStatus.SKIPPED
+                            skipped.add(remaining_id)
+                        pending.clear()
+                        break
                     step = step_by_id[step_id]
 
                     if not self._dependencies_satisfied(
@@ -149,6 +166,7 @@ class PlanExecutor:
                                 exc,
                             )
                             results[step.step_id] = result
+
                             step.status = PlanStepStatus.FAILED
                             failed.add(step.step_id)
 
@@ -237,6 +255,18 @@ class PlanExecutor:
 
                 results[step.step_id] = result
 
+                cancelled_after_execution = self._is_cancelled(task_id)
+
+                if cancelled_after_execution:
+                    if result.verification.passed:
+                        step.status = PlanStepStatus.COMPLETED
+                        completed.add(step.step_id)
+                    else:
+                        step.status = PlanStepStatus.FAILED
+                        failed.add(step.step_id)
+
+                    continue
+
                 if self.run_trace is not None:
                     if result.verification.passed:
                         self.run_trace.record_step_completed(
@@ -290,7 +320,9 @@ class PlanExecutor:
                         },
                     )
 
-        if failed:
+        if self._is_cancelled(task_id):
+            plan.status = PlanStatus.CANCELLED
+        elif failed:
             plan.status = PlanStatus.FAILED
             self.state_manager.fail_task(task_id)
         else:
@@ -310,6 +342,18 @@ class PlanExecutor:
             step_results=results,
             skipped_steps=sorted(skipped),
         )
+
+    def _is_cancelled(self, task_id: str) -> bool:
+        require_task = getattr(self.state_manager, "require_task", None)
+        if require_task is None:
+            return False
+
+        try:
+            task = require_task(task_id)
+        except KeyError:
+            return False
+
+        return getattr(task, "status", None) == TaskStatus.CANCELLED
 
     def _validate(self, plan: Plan) -> None:
         if self.validator is not None:
