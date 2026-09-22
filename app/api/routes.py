@@ -200,6 +200,7 @@ def run_multimodal_analysis(
                     execution_trace=result.execution_trace,
                     )
             ],
+            "execution_events": result.execution_events,
             "traceability": result.execution_trace,
             "execution_telemetry": result.execution_telemetry,
             "generated_deliverables": result.generated_deliverables,
@@ -301,6 +302,7 @@ async def analyze_stream(
                         "generated_deliverables", []
                     ),
                     "stages": result.get("stages", []),
+                    "execution_events": result.get("execution_events", []),
                 },
             )
 

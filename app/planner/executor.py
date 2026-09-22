@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from app.evaluation.integration import ExecutionVerifier, StepVerificationResult
@@ -14,6 +14,7 @@ from app.planner.validator import PlanValidator
 from app.state.manager import AgentStateManager
 from app.state.models import TaskStatus
 from app.services.run_trace import RunTrace
+from app.state.execution_event_projection import project_run_trace_events
 
 
 @dataclass
@@ -23,6 +24,7 @@ class PlanExecutionResult:
     status: PlanStatus
     step_results: dict[str, StepVerificationResult] = field(default_factory=dict)
     skipped_steps: list[str] = field(default_factory=list)
+    execution_events: list[dict[str, Any]] = field(default_factory=list)
 
 
 class PlanExecutor:
@@ -335,12 +337,23 @@ class PlanExecutor:
                 plan.status.value,
             )
 
+        execution_events: list[dict[str, Any]] = []
+
+        if self.run_trace is not None and trace_id is not None:
+            execution_events = [
+                asdict(event)
+                for event in project_run_trace_events(
+                    self.run_trace.get_events(trace_id),
+                )
+            ]
+
         return PlanExecutionResult(
             plan_id=plan.plan_id,
             task_id=task_id,
             status=plan.status,
             step_results=results,
             skipped_steps=sorted(skipped),
+            execution_events=execution_events,
         )
 
     def _is_cancelled(self, task_id: str) -> bool:

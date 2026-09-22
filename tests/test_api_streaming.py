@@ -33,6 +33,18 @@ def test_analyze_stream_emits_workflow_events_and_verified_completion():
                 "metadata": {},
             }
         ],
+        "execution_events": [
+            {
+                "event_id": "trace-1:1",
+                "run_id": "task-test",
+                "type": "run_started",
+                "stage": None,
+                "status": None,
+                "sequence": 1,
+                "timestamp": 1000.0,
+                "metadata": {},
+            }
+        ],
     }
 
     with patch(
@@ -54,3 +66,5 @@ def test_analyze_stream_emits_workflow_events_and_verified_completion():
     assert "Verified final answer" in body
     assert "stages" in body
     assert "Understanding request" in body
+    assert "execution_events" in body
+    assert "run_started" in body
