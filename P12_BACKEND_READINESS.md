@@ -23,7 +23,7 @@ Existing authorities:
 | Requirement | Existing Capability | Location | Status | Required Work | Owner |
 |---|---|---|---|---|---|
 | Canonical Task | Durable task identity and lifecycle | `app/state/models.py`, `app/state/manager.py` | READY | Reuse P6 task identity | P6 |
-| Canonical Run | No independent durable run identity; `task_id` is existing execution identity | `app/state/`, `app/planner/` | PARTIAL | Expose frontend run contract without competing persistence | P12 |
+| Canonical Run | No independent durable run identity; `task_id` is existing execution identity; SSE `run_id` is an alias of `task_id` | `app/state/`, `app/planner/`, `app/api/routes.py` | PARTIAL | Add run/status retrieval and recovery contract without competing persistence | P12 |
 | Conversation | Durable conversation/message persistence | `app/services/conversation_service.py` | READY | Associate with execution contract where required | Existing |
 | Workflow State | Rich workflow state exists | `app/state/workflow_state.py` | PARTIAL | Add only required frontend contract fields | P12 |
 | Durable State | SQLite P6 state store with optimistic versioning | `app/state/store.py` | READY | Reuse | P6 |
@@ -32,10 +32,10 @@ Existing authorities:
 | Semantic Stages | No dedicated frontend-safe stage abstraction found | `app/workflow/` | MISSING | Add thin semantic stage projection | P12 |
 | Execution Events | P6 state, P7 audit, P11 telemetry and Run Trace exist | `app/state/`, `app/governance/`, `app/services/` | PARTIAL | Define user-safe event projection | P12 |
 | Run Trace | Ordered in-memory execution trace | `app/services/run_trace.py` | READY | Reuse; P6 remains durable authority | Existing |
-| Streaming | Existing SSE `/analyze/stream` | `app/api/routes.py` | PARTIAL | Extend existing stream; no second stream | P12 |
-| Streaming Replay | No replay/reconnect mechanism found | `app/api/routes.py` | MISSING | Add recovery/status mechanism using existing state | P12 |
-| Cancellation | Durable P6 cancellation exists | `app/state/manager.py` | PARTIAL | Propagate cancellation into active execution | P12 |
-| Planner Cancellation | No cancellation token in executor | `app/planner/executor.py` | MISSING | Add cooperative cancellation checks | P12 |
+| Streaming | Existing SSE `/analyze/stream` with canonical `task_id`/`run_id`, event IDs, sequence numbers and safe failure messages | `app/api/routes.py` | PARTIAL | Add truthful semantic stage projection and lifecycle coverage without creating a second stream | P12 |
+| Streaming Replay | No replay/reconnect mechanism found | `app/api/routes.py` | MISSING | Add recovery/reconnect mechanism using existing durable task state; do not create a second stream | P12 |
+| Cancellation | Durable P6 cancellation exists; executor stops new scheduling and observes cancellation | `app/state/manager.py`, `app/planner/executor.py` | PARTIAL | Define/verify behavior for already-running work, races and terminal-state cancellation | P12 |
+| Planner Cancellation | Cooperative cancellation checks stop new scheduling and preserve durable CANCELLED state | `app/planner/executor.py` | PARTIAL | Active broker/verifier calls remain non-interruptible; verify race and parallel semantics | P12 |
 | P7 Governance | Permission/risk enforcement | `app/governance/policy.py` | READY | Reuse | P7 |
 | P5 Execution Security | Permission/sandbox enforcement | `app/execution/policy.py` | READY | Reuse | P5 |
 | P8 Verification | Execution verification integrated | `app/planner/executor.py` | READY | Reuse | P8 |
@@ -50,7 +50,7 @@ Existing authorities:
 | History Pagination | No task/history listing API found | `app/services/`, `app/api/` | MISSING | Minimal paginated query layer | P12 |
 | Result Preferences | No semantic frontend preference contract found | Workflow/API | MISSING | Add BRIEF/DETAILED/TABLE/COMPARISON | P12 |
 | Error Contract | FastAPI HTTPException exists | `app/api/routes.py` | PARTIAL | Add stable frontend error model | P12 |
-| Raw Error Protection | SSE currently exposes `str(exc)` | `app/api/routes.py` | PARTIAL | Replace with safe structured errors | Replace with safe structured errors | P12 |
+| Raw Error Protection | SSE no longer exposes raw `str(exc)`; server logs retain diagnostics | `app/api/routes.py` | PARTIAL | Complete stable structured error contract for API/stream failures | P12 |
 | API Authorization | No route-level principal/current-user authorization found | `app/api/routes.py` | MISSING | Establish server-side resource authorization | Establish server-side resource authorization | P12 |
 | Tool Permissions | Tool permissions are declared and validated | `app/tools/registry.py`, `app/planner/tool_selector.py` | READY | Reuse; not a substitute for API authorization | Existing |
 | Analysis Persistence | `analysis_store` is process-local | `app/api/routes.py` | PARTIAL | Do not rely on it for durable recovery | Do not rely on it for durable recovery | P12 |

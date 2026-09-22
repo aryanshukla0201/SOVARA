@@ -32,6 +32,7 @@ def run_multimodal_analysis(
     files: list[UploadFile],
     requested_deliverable: str | None = None,
     conversation_id: str | None = None,
+    task_id: str | None = None,
 ) -> dict:
     """
     API adapter for the SOVARA workflow.
@@ -44,7 +45,7 @@ def run_multimodal_analysis(
     """
 
     request_id = f"req_{uuid.uuid4().hex[:8]}"
-    task_id = f"task_{uuid.uuid4().hex}"
+    task_id = task_id or f"task_{uuid.uuid4().hex}"
 
     state_manager.create_task(
         task_id=task_id,
@@ -224,6 +225,8 @@ async def analyze_stream(
     requested_deliverable: str | None = Form(default=None),
     conversation_id: str | None = Form(default=None),
 ):
+    task_id = f"task_{uuid.uuid4().hex}"
+
     async def event_stream():
         def sse(event: str, data: dict) -> str:
             import json
@@ -236,6 +239,9 @@ async def analyze_stream(
         yield sse(
             "workflow",
             {
+                "event_id": f"{task_id}_1",
+                "run_id": task_id,
+                "sequence": 1,
                 "status": "started",
                 "message": "Analysis started",
             },
@@ -244,6 +250,9 @@ async def analyze_stream(
         yield sse(
             "workflow",
             {
+                "event_id": f"{task_id}_2",
+                "run_id": task_id,
+                "sequence": 2,
                 "status": "processing",
                 "message": "Running verified workflow",
             },
@@ -256,19 +265,21 @@ async def analyze_stream(
                 files=files,
                 requested_deliverable=requested_deliverable,
                 conversation_id=conversation_id,
+                task_id=task_id,
             )
 
             yield sse(
                 "completed",
                 {
+                    "event_id": f"{task_id}_3",
+                    "run_id": task_id,
+                    "sequence": 3,
                     "request_id": result.get("request_id"),
                     "conversation_id": result.get("conversation_id"),
                     "status": result.get("status"),
                     "final_answer": result.get("final_answer"),
                     "evidence": result.get("evidence", []),
-                    "verification_status": result.get(
-                        "verification_status"
-                    ),
+                    "verification_status": result.get("verification_status"),
                     "verification_results": result.get(
                         "verification_results", []
                     ),
@@ -282,12 +293,17 @@ async def analyze_stream(
                 },
             )
 
-        except Exception as exc:
+        except Exception:
+            logger.exception("Streaming analysis failed")
+
             yield sse(
                 "error",
                 {
+                    "event_id": f"{task_id}_3",
+                    "run_id": task_id,
+                    "sequence": 3,
                     "status": "failed",
-                    "error": str(exc),
+                    "message": "Analysis failed",
                 },
             )
 
