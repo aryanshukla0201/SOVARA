@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from app.state.checkpoints import CheckpointStore
 from app.state.models import (
@@ -156,6 +156,17 @@ class AgentStateManager:
         observation: dict | None = None,
     ) -> AgentTaskState:
         state = self.require_task(task_id)
+
+        if state.status in {
+            TaskStatus.CANCELLED,
+            TaskStatus.COMPLETED,
+            TaskStatus.FAILED,
+        }:
+            raise ValueError(
+                f"Step cannot be completed for task status: "
+                f"{state.status.value}"
+            )
+
         step = state.steps.get(step_id)
 
         if step is None:
@@ -201,6 +212,17 @@ class AgentStateManager:
         observation: dict | None = None,
     ) -> AgentTaskState:
         state = self.require_task(task_id)
+
+        if state.status in {
+            TaskStatus.CANCELLED,
+            TaskStatus.COMPLETED,
+            TaskStatus.FAILED,
+        }:
+            raise ValueError(
+                f"Step cannot fail for task status: "
+                f"{state.status.value}"
+            )
+
         step = state.steps.get(step_id)
 
         if step is None:
@@ -237,11 +259,37 @@ class AgentStateManager:
             expected_version=previous_version,
         )
 
+    def update_metadata(
+        self,
+        task_id: str,
+        updates: dict,
+    ) -> AgentTaskState:
+        state = self.require_task(task_id)
+
+        if not isinstance(updates, dict):
+            raise ValueError("updates must be a dictionary")
+
+        previous_version = state.version
+        state.metadata.update(updates)
+        state.touch()
+
+        return self.store.save(
+            state,
+            expected_version=previous_version,
+        )
+
     def complete_task(
         self,
         task_id: str,
     ) -> AgentTaskState:
         state = self.require_task(task_id)
+
+        if state.status == TaskStatus.CANCELLED:
+            raise ValueError("Cannot complete a cancelled task.")
+        if state.status == TaskStatus.COMPLETED:
+            raise ValueError("Task is already completed.")
+        if state.status == TaskStatus.FAILED:
+            raise ValueError("Cannot complete a failed task.")
 
         incomplete = [
             step_id
@@ -274,6 +322,13 @@ class AgentStateManager:
         task_id: str,
     ) -> AgentTaskState:
         state = self.require_task(task_id)
+
+        if state.status == TaskStatus.CANCELLED:
+            raise ValueError("Cannot fail a cancelled task.")
+        if state.status == TaskStatus.COMPLETED:
+            raise ValueError("Cannot fail a completed task.")
+        if state.status == TaskStatus.FAILED:
+            raise ValueError("Task is already failed.")
 
         previous_version = state.version
 
@@ -416,3 +471,32 @@ class AgentStateManager:
         recovered.touch()
 
         return self.store.save(recovered)
+
+    def find_task_by_metadata(
+        self,
+        key: str,
+        value: object,
+    ) -> AgentTaskState | None:
+        return self.store.find_by_metadata(
+            key,
+            value,
+        )
+
+    def update_run_metadata(
+        self,
+        task_id: str,
+        *,
+        run_id: str | None = None,
+        updates: dict | None = None,
+    ) -> AgentTaskState:
+        """Persist frontend-facing run metadata on the canonical task."""
+        self.require_task(task_id)
+        metadata = dict(updates or {})
+        metadata.setdefault("run_id", run_id or task_id)
+        return self.update_metadata(task_id, metadata)
+
+    def list_tasks(
+        self,
+        limit: int = 50,
+    ) -> list[AgentTaskState]:
+        return self.store.list_tasks(limit=limit)

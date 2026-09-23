@@ -19,6 +19,7 @@ class WorkflowState(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     request_id: str
+    task_id: str = ""
     conversation_id: str = ""
     conversation_history: list[dict] = Field(default_factory=list)
     context_messages: list[dict] = Field(default_factory=list)
