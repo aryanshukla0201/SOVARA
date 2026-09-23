@@ -16,3 +16,12 @@ class AnalysisResponse(BaseModel):
     verification_status: str = "pending"
     traceability: list[dict] = Field(default_factory=list)
     generated_deliverables: list[str] = Field(default_factory=list)
+
+class ReportCreateRequest(BaseModel):
+    title: str | None = None
+    subtitle: str | None = None
+
+
+class ReportListResponse(BaseModel):
+    task_id: str
+    reports: list[dict] = Field(default_factory=list)

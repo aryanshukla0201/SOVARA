@@ -7,7 +7,8 @@ from app.hitl.manager import (
     ApprovalNotFoundError,
     ApprovalTransitionError,
 )
-
+from app.api.schemas import ReportCreateRequest
+from app.report.service import ReportService
 
 import asyncio
 import uuid
@@ -35,6 +36,7 @@ approval_manager = ApprovalManager()
 conversation_service = ConversationService()
 knowledge_vault = KnowledgeVault()
 state_manager = AgentStateManager()
+report_service = ReportService(state_manager=state_manager)
 
 
 def build_analysis_error(
@@ -370,6 +372,60 @@ def run_multimodal_analysis(
     analysis_store[result.request_id] = response
 
     return response
+
+@router.post("/tasks/{task_id}/reports")
+def create_task_report(
+    task_id: str,
+    request: ReportCreateRequest,
+) -> dict:
+    try:
+        report = report_service.create_report(
+            task_id=task_id,
+            title=request.title,
+            subtitle=request.subtitle,
+        )
+    except KeyError:
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found.",
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        )
+
+    return report.model_dump(mode="json")
+
+@router.get("/reports/{report_id}")
+def get_report(report_id: str) -> dict:
+    report = report_service.get_report(report_id)
+
+    if report is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Report not found.",
+        )
+
+    return report.model_dump(mode="json")
+
+@router.get("/tasks/{task_id}/reports")
+def list_task_reports(task_id: str) -> dict:
+    try:
+        reports = report_service.list_reports(task_id=task_id)
+    except KeyError:
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found.",
+        )
+
+    return {
+        "task_id": task_id,
+        "reports": [
+            report.model_dump(mode="json")
+            for report in reports
+        ],
+    }
 
 @router.get("/tasks/{task_id}")
 def get_task_status(task_id: str) -> dict:
