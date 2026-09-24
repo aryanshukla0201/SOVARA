@@ -344,7 +344,10 @@ def run_multimodal_analysis(
                     execution_trace=result.execution_trace,
                     )
             ],
-            "execution_events": result.execution_events,
+            "execution_events": result.execution_telemetry.get(
+                "execution_events",
+                []
+            ),
             "traceability": result.execution_trace,
             "execution_telemetry": result.execution_telemetry,
             "generated_deliverables": result.generated_deliverables,

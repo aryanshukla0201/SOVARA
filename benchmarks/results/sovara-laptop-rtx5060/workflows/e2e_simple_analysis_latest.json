@@ -1,0 +1,3382 @@
+{
+  "run_id": "20260924T122600Z",
+  "machine_id": "sovara-laptop-rtx5060",
+  "workload": "e2e_simple_analysis",
+  "query": "Explain in concise technical terms how transformer attention works. Give exactly three numbered points and a one-sentence conclusion.",
+  "configuration": {
+    "cold_runs": 1,
+    "warm_runs": 7,
+    "requested_deliverable": null,
+    "files": []
+  },
+  "success_count": 8,
+  "failure_count": 0,
+  "cold": {
+    "wall_duration_ms": {
+      "count": 1,
+      "min": 13555.63230000189,
+      "max": 13555.63230000189,
+      "mean": 13555.63230000189,
+      "median": 13555.63230000189,
+      "p95": 13555.63230000189,
+      "stddev": 0.0
+    },
+    "llm_duration_ms": null
+  },
+  "warm": {
+    "wall_duration_ms": {
+      "count": 7,
+      "min": 12334.360100001504,
+      "max": 13632.702899998549,
+      "mean": 12870.809885714802,
+      "median": 12786.816600000748,
+      "p95": 13506.946619999508,
+      "stddev": 456.7849470691266
+    },
+    "llm_duration_ms": null
+  },
+  "unsupported_contract_metrics": {
+    "planner_duration_ms": null,
+    "retrieval_duration_ms": null,
+    "tool_duration_ms": null,
+    "verification_duration_ms": null
+  },
+  "raw_runs": [
+    {
+      "iteration": 1,
+      "phase": "cold",
+      "timestamp_utc": "2026-09-24T12:26:24.868026+00:00",
+      "workload": "e2e_simple_analysis",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 13555.63230000189,
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "sandbox_duration_ms": 0,
+      "sandbox_executions": 0,
+      "tools_used": [
+        "ReasoningNode"
+      ],
+      "models_used": [
+        "phi4-mini:latest"
+      ],
+      "verification_status": "passed",
+      "verification_result_count": 1,
+      "external_api_calls": 0,
+      "network_calls": 0,
+      "cloud_uploads": 0,
+      "no_external_calls": true,
+      "request_id": "req_19be6848",
+      "task_id": "task_c641006b54234ef3b70b727260477bbb",
+      "traceability": [
+        {
+          "node_name": "input_processor",
+          "model_used": "n/a",
+          "tools_used": [
+            "file_detection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "input_0"
+          ]
+        },
+        {
+          "node_name": "task_analyzer",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "TaskAnalyzer"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "task_1"
+          ]
+        },
+        {
+          "node_name": "policy_router",
+          "model_used": "n/a",
+          "tools_used": [
+            "PolicyRouter"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "execution_dispatch",
+          "model_used": "n/a",
+          "tools_used": [
+            "route_dispatch"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "reasoning_route",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning_1"
+          ]
+        },
+        {
+          "node_name": "aggregate_results",
+          "model_used": "n/a",
+          "tools_used": [
+            "result_aggregation"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "aggregated_results"
+          ]
+        },
+        {
+          "node_name": "complexity_gate",
+          "model_used": "n/a",
+          "tools_used": [
+            "ComplexityGate"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "synthesis_not_required"
+          ]
+        },
+        {
+          "node_name": "final_answer",
+          "model_used": "n/a",
+          "tools_used": [
+            "answer_selection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "final_answer"
+          ]
+        },
+        {
+          "node_name": "verifier",
+          "model_used": "n/a",
+          "tools_used": [
+            "Verifier"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "verification_1",
+            "passed"
+          ]
+        },
+        {
+          "node_name": "deliverable",
+          "model_used": "n/a",
+          "tools_used": [],
+          "success": true,
+          "relevant_output_ids": []
+        }
+      ],
+      "raw_result": {
+        "request_id": "req_19be6848",
+        "task_id": "task_c641006b54234ef3b70b727260477bbb",
+        "conversation_id": "conv_e53e21a9bb0f",
+        "status": "completed",
+        "final_answer": "Sure, here's an explanation of transformer attention in concise technical terms with three numbered points:\n\n1. **Multi-Head Attention**: The model uses multiple sets (heads) to focus on different parts of input simultaneously; each head computes a scaled dot-product self-attention score for its assigned portion.\n\n2. **Scaled Dot-Product Mechanism**: Each element's attention weight is computed by taking the dot product between queries and keys, scaling it down with their dimension size squared root (to stabilize gradients), then applying softmax to get probabilities that sum up to 1 across all elements in a sequence position.\n\n3. **Contextual Embeddings Generation**: The outputs from each head are concatenated or averaged together along the feature axis before being passed through an additional linear transformation; this results in contextual embeddings which capture dependencies regardless of distance within sequences, enabling effective long-range context understanding and generation tasks like translation.\n\n\nIn summary, transformer attention leverages multi-head mechanisms to process different aspects simultaneously for better representation learning.",
+        "evidence": [],
+        "verification_status": "passed",
+        "verification_results": [
+          {
+            "verification_status": "passed",
+            "failures": [],
+            "numeric_validation": []
+          }
+        ],
+        "stages": [
+          {
+            "stage_id": "task_c641006b54234ef3b70b727260477bbb:understanding:1",
+            "run_id": "task_c641006b54234ef3b70b727260477bbb",
+            "stage_type": "understanding",
+            "status": "completed",
+            "display_label": "Understanding request",
+            "sequence": 1,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_c641006b54234ef3b70b727260477bbb:planning:2",
+            "run_id": "task_c641006b54234ef3b70b727260477bbb",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 2,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_c641006b54234ef3b70b727260477bbb:planning:3",
+            "run_id": "task_c641006b54234ef3b70b727260477bbb",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 3,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_c641006b54234ef3b70b727260477bbb:planning:4",
+            "run_id": "task_c641006b54234ef3b70b727260477bbb",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 4,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_c641006b54234ef3b70b727260477bbb:analyzing:5",
+            "run_id": "task_c641006b54234ef3b70b727260477bbb",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 5,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_c641006b54234ef3b70b727260477bbb:analyzing:6",
+            "run_id": "task_c641006b54234ef3b70b727260477bbb",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 6,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_c641006b54234ef3b70b727260477bbb:analyzing:7",
+            "run_id": "task_c641006b54234ef3b70b727260477bbb",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 7,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_c641006b54234ef3b70b727260477bbb:generating:8",
+            "run_id": "task_c641006b54234ef3b70b727260477bbb",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 8,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_c641006b54234ef3b70b727260477bbb:verifying:9",
+            "run_id": "task_c641006b54234ef3b70b727260477bbb",
+            "stage_type": "verifying",
+            "status": "completed",
+            "display_label": "Verifying result",
+            "sequence": 9,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_c641006b54234ef3b70b727260477bbb:generating:10",
+            "run_id": "task_c641006b54234ef3b70b727260477bbb",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 10,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          }
+        ],
+        "execution_events": [],
+        "traceability": [
+          {
+            "node_name": "input_processor",
+            "model_used": "n/a",
+            "tools_used": [
+              "file_detection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "input_0"
+            ]
+          },
+          {
+            "node_name": "task_analyzer",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "TaskAnalyzer"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "task_1"
+            ]
+          },
+          {
+            "node_name": "policy_router",
+            "model_used": "n/a",
+            "tools_used": [
+              "PolicyRouter"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "execution_dispatch",
+            "model_used": "n/a",
+            "tools_used": [
+              "route_dispatch"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "reasoning_route",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "ReasoningNode"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning_1"
+            ]
+          },
+          {
+            "node_name": "aggregate_results",
+            "model_used": "n/a",
+            "tools_used": [
+              "result_aggregation"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "aggregated_results"
+            ]
+          },
+          {
+            "node_name": "complexity_gate",
+            "model_used": "n/a",
+            "tools_used": [
+              "ComplexityGate"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "synthesis_not_required"
+            ]
+          },
+          {
+            "node_name": "final_answer",
+            "model_used": "n/a",
+            "tools_used": [
+              "answer_selection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "final_answer"
+            ]
+          },
+          {
+            "node_name": "verifier",
+            "model_used": "n/a",
+            "tools_used": [
+              "Verifier"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "verification_1",
+              "passed"
+            ]
+          },
+          {
+            "node_name": "deliverable",
+            "model_used": "n/a",
+            "tools_used": [],
+            "success": true,
+            "relevant_output_ids": []
+          }
+        ],
+        "execution_telemetry": {
+          "local_inference": true,
+          "processing_location": "local",
+          "models_used": [
+            "phi4-mini:latest"
+          ],
+          "llm_calls": 2,
+          "llm_total_duration_ms": 0.0,
+          "llm_average_duration_ms": 0.0,
+          "llm_events": [
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            },
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            }
+          ],
+          "external_api_calls": 0,
+          "network_calls": 0,
+          "cloud_uploads": 0,
+          "files_processed": 0,
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "sandbox_executions": 0,
+          "sandbox_successes": 0,
+          "sandbox_failures": 0,
+          "sandbox_timeouts": 0,
+          "execution_events": [],
+          "no_external_calls": true
+        },
+        "generated_deliverables": []
+      },
+      "error": null
+    },
+    {
+      "iteration": 1,
+      "phase": "warm",
+      "timestamp_utc": "2026-09-24T12:26:37.462921+00:00",
+      "workload": "e2e_simple_analysis",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 12594.427399999404,
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "sandbox_duration_ms": 0,
+      "sandbox_executions": 0,
+      "tools_used": [
+        "ReasoningNode"
+      ],
+      "models_used": [
+        "phi4-mini:latest"
+      ],
+      "verification_status": "passed",
+      "verification_result_count": 1,
+      "external_api_calls": 0,
+      "network_calls": 0,
+      "cloud_uploads": 0,
+      "no_external_calls": true,
+      "request_id": "req_7333812b",
+      "task_id": "task_66c6c11908794d5c9c46599808ab6141",
+      "traceability": [
+        {
+          "node_name": "input_processor",
+          "model_used": "n/a",
+          "tools_used": [
+            "file_detection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "input_0"
+          ]
+        },
+        {
+          "node_name": "task_analyzer",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "TaskAnalyzer"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "task_1"
+          ]
+        },
+        {
+          "node_name": "policy_router",
+          "model_used": "n/a",
+          "tools_used": [
+            "PolicyRouter"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "execution_dispatch",
+          "model_used": "n/a",
+          "tools_used": [
+            "route_dispatch"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "reasoning_route",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning_1"
+          ]
+        },
+        {
+          "node_name": "aggregate_results",
+          "model_used": "n/a",
+          "tools_used": [
+            "result_aggregation"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "aggregated_results"
+          ]
+        },
+        {
+          "node_name": "complexity_gate",
+          "model_used": "n/a",
+          "tools_used": [
+            "ComplexityGate"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "synthesis_not_required"
+          ]
+        },
+        {
+          "node_name": "final_answer",
+          "model_used": "n/a",
+          "tools_used": [
+            "answer_selection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "final_answer"
+          ]
+        },
+        {
+          "node_name": "verifier",
+          "model_used": "n/a",
+          "tools_used": [
+            "Verifier"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "verification_1",
+            "passed"
+          ]
+        },
+        {
+          "node_name": "deliverable",
+          "model_used": "n/a",
+          "tools_used": [],
+          "success": true,
+          "relevant_output_ids": []
+        }
+      ],
+      "raw_result": {
+        "request_id": "req_7333812b",
+        "task_id": "task_66c6c11908794d5c9c46599808ab6141",
+        "conversation_id": "conv_51b9060a9521",
+        "status": "completed",
+        "final_answer": "Sure, here's how transformer attention works in concise technical terms: \n\n1. **Query-Key-Value Mechanism**: Each token's representation is transformed into three vectors - a query (Q), key (K), and value (V) through linear transformations.\n\n2. **Scaled Dot-Product Attention**: The similarity between the queries of different tokens, measured by their dot product scaled down to prevent large values from dominating via softmax normalization on this score matrix results in attention weights that indicate how much focus should be given when aggregating information across all positions (tokens).\n\n3. **Multi-head Self-Attention and Cross-Attention**: Multiple heads allow the model to jointly attend to different representation subspaces at different positions, enhancing its ability to capture various aspects of relationships between tokens.\n\nIn conclusion, transformer attention leverages a query-key-value mechanism with scaled dot-product calculations across multiple 'heads' for effective contextual understanding.",
+        "evidence": [],
+        "verification_status": "passed",
+        "verification_results": [
+          {
+            "verification_status": "passed",
+            "failures": [],
+            "numeric_validation": []
+          }
+        ],
+        "stages": [
+          {
+            "stage_id": "task_66c6c11908794d5c9c46599808ab6141:understanding:1",
+            "run_id": "task_66c6c11908794d5c9c46599808ab6141",
+            "stage_type": "understanding",
+            "status": "completed",
+            "display_label": "Understanding request",
+            "sequence": 1,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_66c6c11908794d5c9c46599808ab6141:planning:2",
+            "run_id": "task_66c6c11908794d5c9c46599808ab6141",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 2,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_66c6c11908794d5c9c46599808ab6141:planning:3",
+            "run_id": "task_66c6c11908794d5c9c46599808ab6141",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 3,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_66c6c11908794d5c9c46599808ab6141:planning:4",
+            "run_id": "task_66c6c11908794d5c9c46599808ab6141",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 4,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_66c6c11908794d5c9c46599808ab6141:analyzing:5",
+            "run_id": "task_66c6c11908794d5c9c46599808ab6141",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 5,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_66c6c11908794d5c9c46599808ab6141:analyzing:6",
+            "run_id": "task_66c6c11908794d5c9c46599808ab6141",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 6,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_66c6c11908794d5c9c46599808ab6141:analyzing:7",
+            "run_id": "task_66c6c11908794d5c9c46599808ab6141",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 7,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_66c6c11908794d5c9c46599808ab6141:generating:8",
+            "run_id": "task_66c6c11908794d5c9c46599808ab6141",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 8,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_66c6c11908794d5c9c46599808ab6141:verifying:9",
+            "run_id": "task_66c6c11908794d5c9c46599808ab6141",
+            "stage_type": "verifying",
+            "status": "completed",
+            "display_label": "Verifying result",
+            "sequence": 9,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_66c6c11908794d5c9c46599808ab6141:generating:10",
+            "run_id": "task_66c6c11908794d5c9c46599808ab6141",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 10,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          }
+        ],
+        "execution_events": [],
+        "traceability": [
+          {
+            "node_name": "input_processor",
+            "model_used": "n/a",
+            "tools_used": [
+              "file_detection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "input_0"
+            ]
+          },
+          {
+            "node_name": "task_analyzer",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "TaskAnalyzer"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "task_1"
+            ]
+          },
+          {
+            "node_name": "policy_router",
+            "model_used": "n/a",
+            "tools_used": [
+              "PolicyRouter"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "execution_dispatch",
+            "model_used": "n/a",
+            "tools_used": [
+              "route_dispatch"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "reasoning_route",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "ReasoningNode"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning_1"
+            ]
+          },
+          {
+            "node_name": "aggregate_results",
+            "model_used": "n/a",
+            "tools_used": [
+              "result_aggregation"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "aggregated_results"
+            ]
+          },
+          {
+            "node_name": "complexity_gate",
+            "model_used": "n/a",
+            "tools_used": [
+              "ComplexityGate"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "synthesis_not_required"
+            ]
+          },
+          {
+            "node_name": "final_answer",
+            "model_used": "n/a",
+            "tools_used": [
+              "answer_selection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "final_answer"
+            ]
+          },
+          {
+            "node_name": "verifier",
+            "model_used": "n/a",
+            "tools_used": [
+              "Verifier"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "verification_1",
+              "passed"
+            ]
+          },
+          {
+            "node_name": "deliverable",
+            "model_used": "n/a",
+            "tools_used": [],
+            "success": true,
+            "relevant_output_ids": []
+          }
+        ],
+        "execution_telemetry": {
+          "local_inference": true,
+          "processing_location": "local",
+          "models_used": [
+            "phi4-mini:latest"
+          ],
+          "llm_calls": 2,
+          "llm_total_duration_ms": 0.0,
+          "llm_average_duration_ms": 0.0,
+          "llm_events": [
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            },
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            }
+          ],
+          "external_api_calls": 0,
+          "network_calls": 0,
+          "cloud_uploads": 0,
+          "files_processed": 0,
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "sandbox_executions": 0,
+          "sandbox_successes": 0,
+          "sandbox_failures": 0,
+          "sandbox_timeouts": 0,
+          "execution_events": [],
+          "no_external_calls": true
+        },
+        "generated_deliverables": []
+      },
+      "error": null
+    },
+    {
+      "iteration": 2,
+      "phase": "warm",
+      "timestamp_utc": "2026-09-24T12:26:49.801423+00:00",
+      "workload": "e2e_simple_analysis",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 12336.903600000369,
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "sandbox_duration_ms": 0,
+      "sandbox_executions": 0,
+      "tools_used": [
+        "ReasoningNode"
+      ],
+      "models_used": [
+        "phi4-mini:latest"
+      ],
+      "verification_status": "passed",
+      "verification_result_count": 1,
+      "external_api_calls": 0,
+      "network_calls": 0,
+      "cloud_uploads": 0,
+      "no_external_calls": true,
+      "request_id": "req_d3ab1131",
+      "task_id": "task_fd5d881c249741c6982486a96989a54d",
+      "traceability": [
+        {
+          "node_name": "input_processor",
+          "model_used": "n/a",
+          "tools_used": [
+            "file_detection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "input_0"
+          ]
+        },
+        {
+          "node_name": "task_analyzer",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "TaskAnalyzer"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "task_1"
+          ]
+        },
+        {
+          "node_name": "policy_router",
+          "model_used": "n/a",
+          "tools_used": [
+            "PolicyRouter"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "execution_dispatch",
+          "model_used": "n/a",
+          "tools_used": [
+            "route_dispatch"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "reasoning_route",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning_1"
+          ]
+        },
+        {
+          "node_name": "aggregate_results",
+          "model_used": "n/a",
+          "tools_used": [
+            "result_aggregation"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "aggregated_results"
+          ]
+        },
+        {
+          "node_name": "complexity_gate",
+          "model_used": "n/a",
+          "tools_used": [
+            "ComplexityGate"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "synthesis_not_required"
+          ]
+        },
+        {
+          "node_name": "final_answer",
+          "model_used": "n/a",
+          "tools_used": [
+            "answer_selection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "final_answer"
+          ]
+        },
+        {
+          "node_name": "verifier",
+          "model_used": "n/a",
+          "tools_used": [
+            "Verifier"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "verification_1",
+            "passed"
+          ]
+        },
+        {
+          "node_name": "deliverable",
+          "model_used": "n/a",
+          "tools_used": [],
+          "success": true,
+          "relevant_output_ids": []
+        }
+      ],
+      "raw_result": {
+        "request_id": "req_d3ab1131",
+        "task_id": "task_fd5d881c249741c6982486a96989a54d",
+        "conversation_id": "conv_b2626dbcedc4",
+        "status": "completed",
+        "final_answer": "1. The transformer uses queries, keys, and values to calculate attention scores that determine how much focus should be given to different parts of input data.\n\n2. These calculations involve a softmax function applied over dot products between query vectors (representing elements we want information about) and key vectors from the entire sequence being processed; this results in weighted averages called context vectors for each element based on its importance as determined by other related items' keys.\n\n3. The output of these attention mechanisms is then combined with input features through linear transformations, allowing subsequent layers to process them further while retaining contextual relationships learned during training.\n\n\nIn summary: Transformer models use queries and keys derived from the data's representation along with a softmax function for calculating weighted context vectors that capture dependencies across different parts in an efficient manner.",
+        "evidence": [],
+        "verification_status": "passed",
+        "verification_results": [
+          {
+            "verification_status": "passed",
+            "failures": [],
+            "numeric_validation": []
+          }
+        ],
+        "stages": [
+          {
+            "stage_id": "task_fd5d881c249741c6982486a96989a54d:understanding:1",
+            "run_id": "task_fd5d881c249741c6982486a96989a54d",
+            "stage_type": "understanding",
+            "status": "completed",
+            "display_label": "Understanding request",
+            "sequence": 1,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_fd5d881c249741c6982486a96989a54d:planning:2",
+            "run_id": "task_fd5d881c249741c6982486a96989a54d",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 2,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_fd5d881c249741c6982486a96989a54d:planning:3",
+            "run_id": "task_fd5d881c249741c6982486a96989a54d",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 3,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_fd5d881c249741c6982486a96989a54d:planning:4",
+            "run_id": "task_fd5d881c249741c6982486a96989a54d",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 4,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_fd5d881c249741c6982486a96989a54d:analyzing:5",
+            "run_id": "task_fd5d881c249741c6982486a96989a54d",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 5,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_fd5d881c249741c6982486a96989a54d:analyzing:6",
+            "run_id": "task_fd5d881c249741c6982486a96989a54d",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 6,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_fd5d881c249741c6982486a96989a54d:analyzing:7",
+            "run_id": "task_fd5d881c249741c6982486a96989a54d",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 7,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_fd5d881c249741c6982486a96989a54d:generating:8",
+            "run_id": "task_fd5d881c249741c6982486a96989a54d",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 8,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_fd5d881c249741c6982486a96989a54d:verifying:9",
+            "run_id": "task_fd5d881c249741c6982486a96989a54d",
+            "stage_type": "verifying",
+            "status": "completed",
+            "display_label": "Verifying result",
+            "sequence": 9,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_fd5d881c249741c6982486a96989a54d:generating:10",
+            "run_id": "task_fd5d881c249741c6982486a96989a54d",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 10,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          }
+        ],
+        "execution_events": [],
+        "traceability": [
+          {
+            "node_name": "input_processor",
+            "model_used": "n/a",
+            "tools_used": [
+              "file_detection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "input_0"
+            ]
+          },
+          {
+            "node_name": "task_analyzer",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "TaskAnalyzer"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "task_1"
+            ]
+          },
+          {
+            "node_name": "policy_router",
+            "model_used": "n/a",
+            "tools_used": [
+              "PolicyRouter"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "execution_dispatch",
+            "model_used": "n/a",
+            "tools_used": [
+              "route_dispatch"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "reasoning_route",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "ReasoningNode"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning_1"
+            ]
+          },
+          {
+            "node_name": "aggregate_results",
+            "model_used": "n/a",
+            "tools_used": [
+              "result_aggregation"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "aggregated_results"
+            ]
+          },
+          {
+            "node_name": "complexity_gate",
+            "model_used": "n/a",
+            "tools_used": [
+              "ComplexityGate"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "synthesis_not_required"
+            ]
+          },
+          {
+            "node_name": "final_answer",
+            "model_used": "n/a",
+            "tools_used": [
+              "answer_selection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "final_answer"
+            ]
+          },
+          {
+            "node_name": "verifier",
+            "model_used": "n/a",
+            "tools_used": [
+              "Verifier"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "verification_1",
+              "passed"
+            ]
+          },
+          {
+            "node_name": "deliverable",
+            "model_used": "n/a",
+            "tools_used": [],
+            "success": true,
+            "relevant_output_ids": []
+          }
+        ],
+        "execution_telemetry": {
+          "local_inference": true,
+          "processing_location": "local",
+          "models_used": [
+            "phi4-mini:latest"
+          ],
+          "llm_calls": 2,
+          "llm_total_duration_ms": 0.0,
+          "llm_average_duration_ms": 0.0,
+          "llm_events": [
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            },
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            }
+          ],
+          "external_api_calls": 0,
+          "network_calls": 0,
+          "cloud_uploads": 0,
+          "files_processed": 0,
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "sandbox_executions": 0,
+          "sandbox_successes": 0,
+          "sandbox_failures": 0,
+          "sandbox_timeouts": 0,
+          "execution_events": [],
+          "no_external_calls": true
+        },
+        "generated_deliverables": []
+      },
+      "error": null
+    },
+    {
+      "iteration": 3,
+      "phase": "warm",
+      "timestamp_utc": "2026-09-24T12:27:02.588535+00:00",
+      "workload": "e2e_simple_analysis",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 12786.816600000748,
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "sandbox_duration_ms": 0,
+      "sandbox_executions": 0,
+      "tools_used": [
+        "ReasoningNode"
+      ],
+      "models_used": [
+        "phi4-mini:latest"
+      ],
+      "verification_status": "passed",
+      "verification_result_count": 1,
+      "external_api_calls": 0,
+      "network_calls": 0,
+      "cloud_uploads": 0,
+      "no_external_calls": true,
+      "request_id": "req_c44385ce",
+      "task_id": "task_22b10794210c409b936abc3b95516544",
+      "traceability": [
+        {
+          "node_name": "input_processor",
+          "model_used": "n/a",
+          "tools_used": [
+            "file_detection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "input_0"
+          ]
+        },
+        {
+          "node_name": "task_analyzer",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "TaskAnalyzer"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "task_1"
+          ]
+        },
+        {
+          "node_name": "policy_router",
+          "model_used": "n/a",
+          "tools_used": [
+            "PolicyRouter"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "execution_dispatch",
+          "model_used": "n/a",
+          "tools_used": [
+            "route_dispatch"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "reasoning_route",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning_1"
+          ]
+        },
+        {
+          "node_name": "aggregate_results",
+          "model_used": "n/a",
+          "tools_used": [
+            "result_aggregation"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "aggregated_results"
+          ]
+        },
+        {
+          "node_name": "complexity_gate",
+          "model_used": "n/a",
+          "tools_used": [
+            "ComplexityGate"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "synthesis_not_required"
+          ]
+        },
+        {
+          "node_name": "final_answer",
+          "model_used": "n/a",
+          "tools_used": [
+            "answer_selection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "final_answer"
+          ]
+        },
+        {
+          "node_name": "verifier",
+          "model_used": "n/a",
+          "tools_used": [
+            "Verifier"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "verification_1",
+            "passed"
+          ]
+        },
+        {
+          "node_name": "deliverable",
+          "model_used": "n/a",
+          "tools_used": [],
+          "success": true,
+          "relevant_output_ids": []
+        }
+      ],
+      "raw_result": {
+        "request_id": "req_c44385ce",
+        "task_id": "task_22b10794210c409b936abc3b95516544",
+        "conversation_id": "conv_03005a219fc8",
+        "status": "completed",
+        "final_answer": "Sure, here's an explanation of how transformer attention works in concise technical terms:\n\n1. **Scaled Dot-Product Attention**: This mechanism computes a weighted sum where each weight is determined by taking the dot product between queries and keys divided by their dimension size (scaling factor), followed by applying softmax to obtain probabilities.\n2. **Multi-head Self-Attention**: Instead of one attention head, multiple heads are used in parallel; this allows capturing different aspects or features from input data simultaneously for better representation learning.\n\nConclusion:\n\nTransformer models leverage these mechanisms primarily through multi-headed self-attention and scaled dot-product calculations that enable efficient processing by focusing on relevant parts within the sequence.",
+        "evidence": [],
+        "verification_status": "passed",
+        "verification_results": [
+          {
+            "verification_status": "passed",
+            "failures": [],
+            "numeric_validation": []
+          }
+        ],
+        "stages": [
+          {
+            "stage_id": "task_22b10794210c409b936abc3b95516544:understanding:1",
+            "run_id": "task_22b10794210c409b936abc3b95516544",
+            "stage_type": "understanding",
+            "status": "completed",
+            "display_label": "Understanding request",
+            "sequence": 1,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_22b10794210c409b936abc3b95516544:planning:2",
+            "run_id": "task_22b10794210c409b936abc3b95516544",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 2,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_22b10794210c409b936abc3b95516544:planning:3",
+            "run_id": "task_22b10794210c409b936abc3b95516544",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 3,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_22b10794210c409b936abc3b95516544:planning:4",
+            "run_id": "task_22b10794210c409b936abc3b95516544",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 4,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_22b10794210c409b936abc3b95516544:analyzing:5",
+            "run_id": "task_22b10794210c409b936abc3b95516544",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 5,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_22b10794210c409b936abc3b95516544:analyzing:6",
+            "run_id": "task_22b10794210c409b936abc3b95516544",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 6,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_22b10794210c409b936abc3b95516544:analyzing:7",
+            "run_id": "task_22b10794210c409b936abc3b95516544",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 7,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_22b10794210c409b936abc3b95516544:generating:8",
+            "run_id": "task_22b10794210c409b936abc3b95516544",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 8,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_22b10794210c409b936abc3b95516544:verifying:9",
+            "run_id": "task_22b10794210c409b936abc3b95516544",
+            "stage_type": "verifying",
+            "status": "completed",
+            "display_label": "Verifying result",
+            "sequence": 9,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_22b10794210c409b936abc3b95516544:generating:10",
+            "run_id": "task_22b10794210c409b936abc3b95516544",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 10,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          }
+        ],
+        "execution_events": [],
+        "traceability": [
+          {
+            "node_name": "input_processor",
+            "model_used": "n/a",
+            "tools_used": [
+              "file_detection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "input_0"
+            ]
+          },
+          {
+            "node_name": "task_analyzer",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "TaskAnalyzer"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "task_1"
+            ]
+          },
+          {
+            "node_name": "policy_router",
+            "model_used": "n/a",
+            "tools_used": [
+              "PolicyRouter"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "execution_dispatch",
+            "model_used": "n/a",
+            "tools_used": [
+              "route_dispatch"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "reasoning_route",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "ReasoningNode"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning_1"
+            ]
+          },
+          {
+            "node_name": "aggregate_results",
+            "model_used": "n/a",
+            "tools_used": [
+              "result_aggregation"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "aggregated_results"
+            ]
+          },
+          {
+            "node_name": "complexity_gate",
+            "model_used": "n/a",
+            "tools_used": [
+              "ComplexityGate"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "synthesis_not_required"
+            ]
+          },
+          {
+            "node_name": "final_answer",
+            "model_used": "n/a",
+            "tools_used": [
+              "answer_selection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "final_answer"
+            ]
+          },
+          {
+            "node_name": "verifier",
+            "model_used": "n/a",
+            "tools_used": [
+              "Verifier"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "verification_1",
+              "passed"
+            ]
+          },
+          {
+            "node_name": "deliverable",
+            "model_used": "n/a",
+            "tools_used": [],
+            "success": true,
+            "relevant_output_ids": []
+          }
+        ],
+        "execution_telemetry": {
+          "local_inference": true,
+          "processing_location": "local",
+          "models_used": [
+            "phi4-mini:latest"
+          ],
+          "llm_calls": 2,
+          "llm_total_duration_ms": 0.0,
+          "llm_average_duration_ms": 0.0,
+          "llm_events": [
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            },
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            }
+          ],
+          "external_api_calls": 0,
+          "network_calls": 0,
+          "cloud_uploads": 0,
+          "files_processed": 0,
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "sandbox_executions": 0,
+          "sandbox_successes": 0,
+          "sandbox_failures": 0,
+          "sandbox_timeouts": 0,
+          "execution_events": [],
+          "no_external_calls": true
+        },
+        "generated_deliverables": []
+      },
+      "error": null
+    },
+    {
+      "iteration": 4,
+      "phase": "warm",
+      "timestamp_utc": "2026-09-24T12:27:16.216430+00:00",
+      "workload": "e2e_simple_analysis",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 13632.702899998549,
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "sandbox_duration_ms": 0,
+      "sandbox_executions": 0,
+      "tools_used": [
+        "ReasoningNode"
+      ],
+      "models_used": [
+        "phi4-mini:latest"
+      ],
+      "verification_status": "passed",
+      "verification_result_count": 1,
+      "external_api_calls": 0,
+      "network_calls": 0,
+      "cloud_uploads": 0,
+      "no_external_calls": true,
+      "request_id": "req_a3c3b16c",
+      "task_id": "task_06b154c0090b4b0281ad9e2902c56f5c",
+      "traceability": [
+        {
+          "node_name": "input_processor",
+          "model_used": "n/a",
+          "tools_used": [
+            "file_detection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "input_0"
+          ]
+        },
+        {
+          "node_name": "task_analyzer",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "TaskAnalyzer"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "task_1"
+          ]
+        },
+        {
+          "node_name": "policy_router",
+          "model_used": "n/a",
+          "tools_used": [
+            "PolicyRouter"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "execution_dispatch",
+          "model_used": "n/a",
+          "tools_used": [
+            "route_dispatch"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "reasoning_route",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning_1"
+          ]
+        },
+        {
+          "node_name": "aggregate_results",
+          "model_used": "n/a",
+          "tools_used": [
+            "result_aggregation"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "aggregated_results"
+          ]
+        },
+        {
+          "node_name": "complexity_gate",
+          "model_used": "n/a",
+          "tools_used": [
+            "ComplexityGate"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "synthesis_not_required"
+          ]
+        },
+        {
+          "node_name": "final_answer",
+          "model_used": "n/a",
+          "tools_used": [
+            "answer_selection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "final_answer"
+          ]
+        },
+        {
+          "node_name": "verifier",
+          "model_used": "n/a",
+          "tools_used": [
+            "Verifier"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "verification_1",
+            "passed"
+          ]
+        },
+        {
+          "node_name": "deliverable",
+          "model_used": "n/a",
+          "tools_used": [],
+          "success": true,
+          "relevant_output_ids": []
+        }
+      ],
+      "raw_result": {
+        "request_id": "req_a3c3b16c",
+        "task_id": "task_06b154c0090b4b0281ad9e2902c56f5c",
+        "conversation_id": "conv_27c917bfbc7c",
+        "status": "completed",
+        "final_answer": "Sure, here's an explanation of transformer attention in concise technical terms with three numbered points:\n\n1. **Key and Value Generation**: The input sequence is passed through a linear layer to create key (K) vectors for each position; similarly, another set generates value (V) vectors.\n\n2. **Query Formation & Scoring**: A third vector derived from the same inputs forms queries (Q). These Q vectors are used in dot-product calculations with K vectors across all positions of input sequences resulting in attention scores that indicate relevance between different parts of data.\n\n3. **Weighted Sum and Output Generation**: The computed weights, which reflect how much focus should be given to each part based on the context provided by queries (Q), scale V vectors accordingly before summing them up; this produces an output vector for every position in input sequences that captures contextual relationships across all parts of data.\n\nIn conclusion, transformer attention enables models like BERT and GPT-3 to weigh different words' importance within a sentence dynamically.",
+        "evidence": [],
+        "verification_status": "passed",
+        "verification_results": [
+          {
+            "verification_status": "passed",
+            "failures": [],
+            "numeric_validation": []
+          }
+        ],
+        "stages": [
+          {
+            "stage_id": "task_06b154c0090b4b0281ad9e2902c56f5c:understanding:1",
+            "run_id": "task_06b154c0090b4b0281ad9e2902c56f5c",
+            "stage_type": "understanding",
+            "status": "completed",
+            "display_label": "Understanding request",
+            "sequence": 1,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_06b154c0090b4b0281ad9e2902c56f5c:planning:2",
+            "run_id": "task_06b154c0090b4b0281ad9e2902c56f5c",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 2,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_06b154c0090b4b0281ad9e2902c56f5c:planning:3",
+            "run_id": "task_06b154c0090b4b0281ad9e2902c56f5c",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 3,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_06b154c0090b4b0281ad9e2902c56f5c:planning:4",
+            "run_id": "task_06b154c0090b4b0281ad9e2902c56f5c",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 4,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_06b154c0090b4b0281ad9e2902c56f5c:analyzing:5",
+            "run_id": "task_06b154c0090b4b0281ad9e2902c56f5c",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 5,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_06b154c0090b4b0281ad9e2902c56f5c:analyzing:6",
+            "run_id": "task_06b154c0090b4b0281ad9e2902c56f5c",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 6,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_06b154c0090b4b0281ad9e2902c56f5c:analyzing:7",
+            "run_id": "task_06b154c0090b4b0281ad9e2902c56f5c",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 7,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_06b154c0090b4b0281ad9e2902c56f5c:generating:8",
+            "run_id": "task_06b154c0090b4b0281ad9e2902c56f5c",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 8,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_06b154c0090b4b0281ad9e2902c56f5c:verifying:9",
+            "run_id": "task_06b154c0090b4b0281ad9e2902c56f5c",
+            "stage_type": "verifying",
+            "status": "completed",
+            "display_label": "Verifying result",
+            "sequence": 9,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_06b154c0090b4b0281ad9e2902c56f5c:generating:10",
+            "run_id": "task_06b154c0090b4b0281ad9e2902c56f5c",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 10,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          }
+        ],
+        "execution_events": [],
+        "traceability": [
+          {
+            "node_name": "input_processor",
+            "model_used": "n/a",
+            "tools_used": [
+              "file_detection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "input_0"
+            ]
+          },
+          {
+            "node_name": "task_analyzer",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "TaskAnalyzer"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "task_1"
+            ]
+          },
+          {
+            "node_name": "policy_router",
+            "model_used": "n/a",
+            "tools_used": [
+              "PolicyRouter"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "execution_dispatch",
+            "model_used": "n/a",
+            "tools_used": [
+              "route_dispatch"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "reasoning_route",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "ReasoningNode"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning_1"
+            ]
+          },
+          {
+            "node_name": "aggregate_results",
+            "model_used": "n/a",
+            "tools_used": [
+              "result_aggregation"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "aggregated_results"
+            ]
+          },
+          {
+            "node_name": "complexity_gate",
+            "model_used": "n/a",
+            "tools_used": [
+              "ComplexityGate"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "synthesis_not_required"
+            ]
+          },
+          {
+            "node_name": "final_answer",
+            "model_used": "n/a",
+            "tools_used": [
+              "answer_selection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "final_answer"
+            ]
+          },
+          {
+            "node_name": "verifier",
+            "model_used": "n/a",
+            "tools_used": [
+              "Verifier"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "verification_1",
+              "passed"
+            ]
+          },
+          {
+            "node_name": "deliverable",
+            "model_used": "n/a",
+            "tools_used": [],
+            "success": true,
+            "relevant_output_ids": []
+          }
+        ],
+        "execution_telemetry": {
+          "local_inference": true,
+          "processing_location": "local",
+          "models_used": [
+            "phi4-mini:latest"
+          ],
+          "llm_calls": 2,
+          "llm_total_duration_ms": 0.0,
+          "llm_average_duration_ms": 0.0,
+          "llm_events": [
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            },
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            }
+          ],
+          "external_api_calls": 0,
+          "network_calls": 0,
+          "cloud_uploads": 0,
+          "files_processed": 0,
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "sandbox_executions": 0,
+          "sandbox_successes": 0,
+          "sandbox_failures": 0,
+          "sandbox_timeouts": 0,
+          "execution_events": [],
+          "no_external_calls": true
+        },
+        "generated_deliverables": []
+      },
+      "error": null
+    },
+    {
+      "iteration": 5,
+      "phase": "warm",
+      "timestamp_utc": "2026-09-24T12:27:29.431529+00:00",
+      "workload": "e2e_simple_analysis",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 13213.515300001745,
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "sandbox_duration_ms": 0,
+      "sandbox_executions": 0,
+      "tools_used": [
+        "ReasoningNode"
+      ],
+      "models_used": [
+        "phi4-mini:latest"
+      ],
+      "verification_status": "passed",
+      "verification_result_count": 1,
+      "external_api_calls": 0,
+      "network_calls": 0,
+      "cloud_uploads": 0,
+      "no_external_calls": true,
+      "request_id": "req_1aab2b34",
+      "task_id": "task_3d2ff38dda59418f82bbf5fad4436667",
+      "traceability": [
+        {
+          "node_name": "input_processor",
+          "model_used": "n/a",
+          "tools_used": [
+            "file_detection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "input_0"
+          ]
+        },
+        {
+          "node_name": "task_analyzer",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "TaskAnalyzer"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "task_1"
+          ]
+        },
+        {
+          "node_name": "policy_router",
+          "model_used": "n/a",
+          "tools_used": [
+            "PolicyRouter"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "execution_dispatch",
+          "model_used": "n/a",
+          "tools_used": [
+            "route_dispatch"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "reasoning_route",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning_1"
+          ]
+        },
+        {
+          "node_name": "aggregate_results",
+          "model_used": "n/a",
+          "tools_used": [
+            "result_aggregation"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "aggregated_results"
+          ]
+        },
+        {
+          "node_name": "complexity_gate",
+          "model_used": "n/a",
+          "tools_used": [
+            "ComplexityGate"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "synthesis_not_required"
+          ]
+        },
+        {
+          "node_name": "final_answer",
+          "model_used": "n/a",
+          "tools_used": [
+            "answer_selection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "final_answer"
+          ]
+        },
+        {
+          "node_name": "verifier",
+          "model_used": "n/a",
+          "tools_used": [
+            "Verifier"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "verification_1",
+            "passed"
+          ]
+        },
+        {
+          "node_name": "deliverable",
+          "model_used": "n/a",
+          "tools_used": [],
+          "success": true,
+          "relevant_output_ids": []
+        }
+      ],
+      "raw_result": {
+        "request_id": "req_1aab2b34",
+        "task_id": "task_3d2ff38dda59418f82bbf5fad4436667",
+        "conversation_id": "conv_823e7fa325c2",
+        "status": "completed",
+        "final_answer": "1. Transformer attention uses queries, keys, and values to compute weighted averages of input features for each token in a sequence.\n\n2. The weights are determined by calculating dot products between query vectors (representing tokens) and key vectors from other positions within an extended context window; this results in the softmax function normalizing these scores into probabilities that indicate importance or relevance.\n\n3. These attention-weighted values, derived after applying scaling factors to stabilize gradients during training due to their large magnitudes when dot products are computed across long sequences (like Transformers), represent a contextualized embedding for each token which is then used in subsequent layers of the model.\n\n\nConclusion: Transformer models leverage an innovative mechanism called 'attention' that dynamically weighs input features based on context, enabling them to process and generate language with remarkable efficiency.",
+        "evidence": [],
+        "verification_status": "passed",
+        "verification_results": [
+          {
+            "verification_status": "passed",
+            "failures": [],
+            "numeric_validation": []
+          }
+        ],
+        "stages": [
+          {
+            "stage_id": "task_3d2ff38dda59418f82bbf5fad4436667:understanding:1",
+            "run_id": "task_3d2ff38dda59418f82bbf5fad4436667",
+            "stage_type": "understanding",
+            "status": "completed",
+            "display_label": "Understanding request",
+            "sequence": 1,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_3d2ff38dda59418f82bbf5fad4436667:planning:2",
+            "run_id": "task_3d2ff38dda59418f82bbf5fad4436667",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 2,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_3d2ff38dda59418f82bbf5fad4436667:planning:3",
+            "run_id": "task_3d2ff38dda59418f82bbf5fad4436667",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 3,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_3d2ff38dda59418f82bbf5fad4436667:planning:4",
+            "run_id": "task_3d2ff38dda59418f82bbf5fad4436667",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 4,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_3d2ff38dda59418f82bbf5fad4436667:analyzing:5",
+            "run_id": "task_3d2ff38dda59418f82bbf5fad4436667",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 5,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_3d2ff38dda59418f82bbf5fad4436667:analyzing:6",
+            "run_id": "task_3d2ff38dda59418f82bbf5fad4436667",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 6,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_3d2ff38dda59418f82bbf5fad4436667:analyzing:7",
+            "run_id": "task_3d2ff38dda59418f82bbf5fad4436667",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 7,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_3d2ff38dda59418f82bbf5fad4436667:generating:8",
+            "run_id": "task_3d2ff38dda59418f82bbf5fad4436667",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 8,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_3d2ff38dda59418f82bbf5fad4436667:verifying:9",
+            "run_id": "task_3d2ff38dda59418f82bbf5fad4436667",
+            "stage_type": "verifying",
+            "status": "completed",
+            "display_label": "Verifying result",
+            "sequence": 9,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_3d2ff38dda59418f82bbf5fad4436667:generating:10",
+            "run_id": "task_3d2ff38dda59418f82bbf5fad4436667",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 10,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          }
+        ],
+        "execution_events": [],
+        "traceability": [
+          {
+            "node_name": "input_processor",
+            "model_used": "n/a",
+            "tools_used": [
+              "file_detection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "input_0"
+            ]
+          },
+          {
+            "node_name": "task_analyzer",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "TaskAnalyzer"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "task_1"
+            ]
+          },
+          {
+            "node_name": "policy_router",
+            "model_used": "n/a",
+            "tools_used": [
+              "PolicyRouter"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "execution_dispatch",
+            "model_used": "n/a",
+            "tools_used": [
+              "route_dispatch"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "reasoning_route",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "ReasoningNode"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning_1"
+            ]
+          },
+          {
+            "node_name": "aggregate_results",
+            "model_used": "n/a",
+            "tools_used": [
+              "result_aggregation"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "aggregated_results"
+            ]
+          },
+          {
+            "node_name": "complexity_gate",
+            "model_used": "n/a",
+            "tools_used": [
+              "ComplexityGate"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "synthesis_not_required"
+            ]
+          },
+          {
+            "node_name": "final_answer",
+            "model_used": "n/a",
+            "tools_used": [
+              "answer_selection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "final_answer"
+            ]
+          },
+          {
+            "node_name": "verifier",
+            "model_used": "n/a",
+            "tools_used": [
+              "Verifier"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "verification_1",
+              "passed"
+            ]
+          },
+          {
+            "node_name": "deliverable",
+            "model_used": "n/a",
+            "tools_used": [],
+            "success": true,
+            "relevant_output_ids": []
+          }
+        ],
+        "execution_telemetry": {
+          "local_inference": true,
+          "processing_location": "local",
+          "models_used": [
+            "phi4-mini:latest"
+          ],
+          "llm_calls": 2,
+          "llm_total_duration_ms": 0.0,
+          "llm_average_duration_ms": 0.0,
+          "llm_events": [
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            },
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            }
+          ],
+          "external_api_calls": 0,
+          "network_calls": 0,
+          "cloud_uploads": 0,
+          "files_processed": 0,
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "sandbox_executions": 0,
+          "sandbox_successes": 0,
+          "sandbox_failures": 0,
+          "sandbox_timeouts": 0,
+          "execution_events": [],
+          "no_external_calls": true
+        },
+        "generated_deliverables": []
+      },
+      "error": null
+    },
+    {
+      "iteration": 6,
+      "phase": "warm",
+      "timestamp_utc": "2026-09-24T12:27:41.764938+00:00",
+      "workload": "e2e_simple_analysis",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 12334.360100001504,
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "sandbox_duration_ms": 0,
+      "sandbox_executions": 0,
+      "tools_used": [
+        "ReasoningNode"
+      ],
+      "models_used": [
+        "phi4-mini:latest"
+      ],
+      "verification_status": "passed",
+      "verification_result_count": 1,
+      "external_api_calls": 0,
+      "network_calls": 0,
+      "cloud_uploads": 0,
+      "no_external_calls": true,
+      "request_id": "req_dea973fb",
+      "task_id": "task_dc2fb592d26347719892487575f4aff5",
+      "traceability": [
+        {
+          "node_name": "input_processor",
+          "model_used": "n/a",
+          "tools_used": [
+            "file_detection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "input_0"
+          ]
+        },
+        {
+          "node_name": "task_analyzer",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "TaskAnalyzer"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "task_1"
+          ]
+        },
+        {
+          "node_name": "policy_router",
+          "model_used": "n/a",
+          "tools_used": [
+            "PolicyRouter"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "execution_dispatch",
+          "model_used": "n/a",
+          "tools_used": [
+            "route_dispatch"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "reasoning_route",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning_1"
+          ]
+        },
+        {
+          "node_name": "aggregate_results",
+          "model_used": "n/a",
+          "tools_used": [
+            "result_aggregation"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "aggregated_results"
+          ]
+        },
+        {
+          "node_name": "complexity_gate",
+          "model_used": "n/a",
+          "tools_used": [
+            "ComplexityGate"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "synthesis_not_required"
+          ]
+        },
+        {
+          "node_name": "final_answer",
+          "model_used": "n/a",
+          "tools_used": [
+            "answer_selection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "final_answer"
+          ]
+        },
+        {
+          "node_name": "verifier",
+          "model_used": "n/a",
+          "tools_used": [
+            "Verifier"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "verification_1",
+            "passed"
+          ]
+        },
+        {
+          "node_name": "deliverable",
+          "model_used": "n/a",
+          "tools_used": [],
+          "success": true,
+          "relevant_output_ids": []
+        }
+      ],
+      "raw_result": {
+        "request_id": "req_dea973fb",
+        "task_id": "task_dc2fb592d26347719892487575f4aff5",
+        "conversation_id": "conv_51218d73203f",
+        "status": "completed",
+        "final_answer": "1. The transformer uses self-attention mechanisms to weigh input features differently, allowing it to focus on important parts of data for tasks like translation or summarization.\n\n2. It computes attention scores using queries (Q), keys (K), and values (V) derived from inputs; these determine how much influence each part should have when processing another piece in the sequence.\n\n3. Multi-head self-attention allows parallel computation over different representation subspaces, enhancing its ability to capture various aspects of data relationships simultaneously.\n\n\nConclusion: Transformer attention leverages queries, keys, and multi-headed computations for efficient context-aware feature weighting across sequences.",
+        "evidence": [],
+        "verification_status": "passed",
+        "verification_results": [
+          {
+            "verification_status": "passed",
+            "failures": [],
+            "numeric_validation": []
+          }
+        ],
+        "stages": [
+          {
+            "stage_id": "task_dc2fb592d26347719892487575f4aff5:understanding:1",
+            "run_id": "task_dc2fb592d26347719892487575f4aff5",
+            "stage_type": "understanding",
+            "status": "completed",
+            "display_label": "Understanding request",
+            "sequence": 1,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_dc2fb592d26347719892487575f4aff5:planning:2",
+            "run_id": "task_dc2fb592d26347719892487575f4aff5",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 2,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_dc2fb592d26347719892487575f4aff5:planning:3",
+            "run_id": "task_dc2fb592d26347719892487575f4aff5",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 3,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_dc2fb592d26347719892487575f4aff5:planning:4",
+            "run_id": "task_dc2fb592d26347719892487575f4aff5",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 4,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_dc2fb592d26347719892487575f4aff5:analyzing:5",
+            "run_id": "task_dc2fb592d26347719892487575f4aff5",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 5,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_dc2fb592d26347719892487575f4aff5:analyzing:6",
+            "run_id": "task_dc2fb592d26347719892487575f4aff5",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 6,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_dc2fb592d26347719892487575f4aff5:analyzing:7",
+            "run_id": "task_dc2fb592d26347719892487575f4aff5",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 7,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_dc2fb592d26347719892487575f4aff5:generating:8",
+            "run_id": "task_dc2fb592d26347719892487575f4aff5",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 8,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_dc2fb592d26347719892487575f4aff5:verifying:9",
+            "run_id": "task_dc2fb592d26347719892487575f4aff5",
+            "stage_type": "verifying",
+            "status": "completed",
+            "display_label": "Verifying result",
+            "sequence": 9,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_dc2fb592d26347719892487575f4aff5:generating:10",
+            "run_id": "task_dc2fb592d26347719892487575f4aff5",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 10,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          }
+        ],
+        "execution_events": [],
+        "traceability": [
+          {
+            "node_name": "input_processor",
+            "model_used": "n/a",
+            "tools_used": [
+              "file_detection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "input_0"
+            ]
+          },
+          {
+            "node_name": "task_analyzer",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "TaskAnalyzer"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "task_1"
+            ]
+          },
+          {
+            "node_name": "policy_router",
+            "model_used": "n/a",
+            "tools_used": [
+              "PolicyRouter"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "execution_dispatch",
+            "model_used": "n/a",
+            "tools_used": [
+              "route_dispatch"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "reasoning_route",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "ReasoningNode"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning_1"
+            ]
+          },
+          {
+            "node_name": "aggregate_results",
+            "model_used": "n/a",
+            "tools_used": [
+              "result_aggregation"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "aggregated_results"
+            ]
+          },
+          {
+            "node_name": "complexity_gate",
+            "model_used": "n/a",
+            "tools_used": [
+              "ComplexityGate"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "synthesis_not_required"
+            ]
+          },
+          {
+            "node_name": "final_answer",
+            "model_used": "n/a",
+            "tools_used": [
+              "answer_selection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "final_answer"
+            ]
+          },
+          {
+            "node_name": "verifier",
+            "model_used": "n/a",
+            "tools_used": [
+              "Verifier"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "verification_1",
+              "passed"
+            ]
+          },
+          {
+            "node_name": "deliverable",
+            "model_used": "n/a",
+            "tools_used": [],
+            "success": true,
+            "relevant_output_ids": []
+          }
+        ],
+        "execution_telemetry": {
+          "local_inference": true,
+          "processing_location": "local",
+          "models_used": [
+            "phi4-mini:latest"
+          ],
+          "llm_calls": 2,
+          "llm_total_duration_ms": 0.0,
+          "llm_average_duration_ms": 0.0,
+          "llm_events": [
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            },
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            }
+          ],
+          "external_api_calls": 0,
+          "network_calls": 0,
+          "cloud_uploads": 0,
+          "files_processed": 0,
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "sandbox_executions": 0,
+          "sandbox_successes": 0,
+          "sandbox_failures": 0,
+          "sandbox_timeouts": 0,
+          "execution_events": [],
+          "no_external_calls": true
+        },
+        "generated_deliverables": []
+      },
+      "error": null
+    },
+    {
+      "iteration": 7,
+      "phase": "warm",
+      "timestamp_utc": "2026-09-24T12:27:54.968187+00:00",
+      "workload": "e2e_simple_analysis",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 13196.943300001294,
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "sandbox_duration_ms": 0,
+      "sandbox_executions": 0,
+      "tools_used": [
+        "ReasoningNode"
+      ],
+      "models_used": [
+        "phi4-mini:latest"
+      ],
+      "verification_status": "passed",
+      "verification_result_count": 1,
+      "external_api_calls": 0,
+      "network_calls": 0,
+      "cloud_uploads": 0,
+      "no_external_calls": true,
+      "request_id": "req_dbb785fb",
+      "task_id": "task_e84b319bfe4544e0bc2bd245744d059e",
+      "traceability": [
+        {
+          "node_name": "input_processor",
+          "model_used": "n/a",
+          "tools_used": [
+            "file_detection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "input_0"
+          ]
+        },
+        {
+          "node_name": "task_analyzer",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "TaskAnalyzer"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "task_1"
+          ]
+        },
+        {
+          "node_name": "policy_router",
+          "model_used": "n/a",
+          "tools_used": [
+            "PolicyRouter"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "execution_dispatch",
+          "model_used": "n/a",
+          "tools_used": [
+            "route_dispatch"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning"
+          ]
+        },
+        {
+          "node_name": "reasoning_route",
+          "model_used": "phi4-mini:latest",
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "reasoning_1"
+          ]
+        },
+        {
+          "node_name": "aggregate_results",
+          "model_used": "n/a",
+          "tools_used": [
+            "result_aggregation"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "aggregated_results"
+          ]
+        },
+        {
+          "node_name": "complexity_gate",
+          "model_used": "n/a",
+          "tools_used": [
+            "ComplexityGate"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "synthesis_not_required"
+          ]
+        },
+        {
+          "node_name": "final_answer",
+          "model_used": "n/a",
+          "tools_used": [
+            "answer_selection"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "final_answer"
+          ]
+        },
+        {
+          "node_name": "verifier",
+          "model_used": "n/a",
+          "tools_used": [
+            "Verifier"
+          ],
+          "success": true,
+          "relevant_output_ids": [
+            "verification_1",
+            "passed"
+          ]
+        },
+        {
+          "node_name": "deliverable",
+          "model_used": "n/a",
+          "tools_used": [],
+          "success": true,
+          "relevant_output_ids": []
+        }
+      ],
+      "raw_result": {
+        "request_id": "req_dbb785fb",
+        "task_id": "task_e84b319bfe4544e0bc2bd245744d059e",
+        "conversation_id": "conv_eec39f33152a",
+        "status": "completed",
+        "final_answer": "Sure, here's an explanation of transformer attention in concise technical terms with three numbered points:\n\n1. **Key-Value Attention**: The model computes a weighted sum over all input tokens using queries (Q), keys (K), and values (V). Each token generates scores based on its compatibility to others through the dot product between Q and K, followed by scaling.\n\n2. **Multi-head Mechanism**: Instead of having one set of parameters for attention calculations across different positions in a sequence simultaneously, transformer models use multiple \"heads\" that allow them to jointly attend to information from all representation subspaces at once with separate learned linear projections (Wq_i and Wk_j).\n\n3. **Output Generation & Softmax Normalization**: The outputs are combined using another set of weights before being passed through a softmax function for normalization, ensuring the attention scores sum up to 1.\n\nIn conclusion, transformer models use key-value queries with multi-head mechanisms that allow them to efficiently process and relate different parts of input data.",
+        "evidence": [],
+        "verification_status": "passed",
+        "verification_results": [
+          {
+            "verification_status": "passed",
+            "failures": [],
+            "numeric_validation": []
+          }
+        ],
+        "stages": [
+          {
+            "stage_id": "task_e84b319bfe4544e0bc2bd245744d059e:understanding:1",
+            "run_id": "task_e84b319bfe4544e0bc2bd245744d059e",
+            "stage_type": "understanding",
+            "status": "completed",
+            "display_label": "Understanding request",
+            "sequence": 1,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_e84b319bfe4544e0bc2bd245744d059e:planning:2",
+            "run_id": "task_e84b319bfe4544e0bc2bd245744d059e",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 2,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_e84b319bfe4544e0bc2bd245744d059e:planning:3",
+            "run_id": "task_e84b319bfe4544e0bc2bd245744d059e",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 3,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_e84b319bfe4544e0bc2bd245744d059e:planning:4",
+            "run_id": "task_e84b319bfe4544e0bc2bd245744d059e",
+            "stage_type": "planning",
+            "status": "completed",
+            "display_label": "Planning",
+            "sequence": 4,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_e84b319bfe4544e0bc2bd245744d059e:analyzing:5",
+            "run_id": "task_e84b319bfe4544e0bc2bd245744d059e",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 5,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_e84b319bfe4544e0bc2bd245744d059e:analyzing:6",
+            "run_id": "task_e84b319bfe4544e0bc2bd245744d059e",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 6,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_e84b319bfe4544e0bc2bd245744d059e:analyzing:7",
+            "run_id": "task_e84b319bfe4544e0bc2bd245744d059e",
+            "stage_type": "analyzing",
+            "status": "completed",
+            "display_label": "Analyzing",
+            "sequence": 7,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_e84b319bfe4544e0bc2bd245744d059e:generating:8",
+            "run_id": "task_e84b319bfe4544e0bc2bd245744d059e",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 8,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_e84b319bfe4544e0bc2bd245744d059e:verifying:9",
+            "run_id": "task_e84b319bfe4544e0bc2bd245744d059e",
+            "stage_type": "verifying",
+            "status": "completed",
+            "display_label": "Verifying result",
+            "sequence": 9,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          },
+          {
+            "stage_id": "task_e84b319bfe4544e0bc2bd245744d059e:generating:10",
+            "run_id": "task_e84b319bfe4544e0bc2bd245744d059e",
+            "stage_type": "generating",
+            "status": "completed",
+            "display_label": "Generating result",
+            "sequence": 10,
+            "started_at": null,
+            "completed_at": null,
+            "metadata": {}
+          }
+        ],
+        "execution_events": [],
+        "traceability": [
+          {
+            "node_name": "input_processor",
+            "model_used": "n/a",
+            "tools_used": [
+              "file_detection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "input_0"
+            ]
+          },
+          {
+            "node_name": "task_analyzer",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "TaskAnalyzer"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "task_1"
+            ]
+          },
+          {
+            "node_name": "policy_router",
+            "model_used": "n/a",
+            "tools_used": [
+              "PolicyRouter"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "execution_dispatch",
+            "model_used": "n/a",
+            "tools_used": [
+              "route_dispatch"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning"
+            ]
+          },
+          {
+            "node_name": "reasoning_route",
+            "model_used": "phi4-mini:latest",
+            "tools_used": [
+              "ReasoningNode"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "reasoning_1"
+            ]
+          },
+          {
+            "node_name": "aggregate_results",
+            "model_used": "n/a",
+            "tools_used": [
+              "result_aggregation"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "aggregated_results"
+            ]
+          },
+          {
+            "node_name": "complexity_gate",
+            "model_used": "n/a",
+            "tools_used": [
+              "ComplexityGate"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "synthesis_not_required"
+            ]
+          },
+          {
+            "node_name": "final_answer",
+            "model_used": "n/a",
+            "tools_used": [
+              "answer_selection"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "final_answer"
+            ]
+          },
+          {
+            "node_name": "verifier",
+            "model_used": "n/a",
+            "tools_used": [
+              "Verifier"
+            ],
+            "success": true,
+            "relevant_output_ids": [
+              "verification_1",
+              "passed"
+            ]
+          },
+          {
+            "node_name": "deliverable",
+            "model_used": "n/a",
+            "tools_used": [],
+            "success": true,
+            "relevant_output_ids": []
+          }
+        ],
+        "execution_telemetry": {
+          "local_inference": true,
+          "processing_location": "local",
+          "models_used": [
+            "phi4-mini:latest"
+          ],
+          "llm_calls": 2,
+          "llm_total_duration_ms": 0.0,
+          "llm_average_duration_ms": 0.0,
+          "llm_events": [
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            },
+            {
+              "type": "llm_call",
+              "model_name": "phi4-mini:latest",
+              "duration_ms": null,
+              "success": true,
+              "input_chars": null,
+              "output_chars": null
+            }
+          ],
+          "external_api_calls": 0,
+          "network_calls": 0,
+          "cloud_uploads": 0,
+          "files_processed": 0,
+          "tools_used": [
+            "ReasoningNode"
+          ],
+          "sandbox_executions": 0,
+          "sandbox_successes": 0,
+          "sandbox_failures": 0,
+          "sandbox_timeouts": 0,
+          "execution_events": [],
+          "no_external_calls": true
+        },
+        "generated_deliverables": []
+      },
+      "error": null
+    }
+  ]
+}
