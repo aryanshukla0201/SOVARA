@@ -57,3 +57,6 @@ data/test/*.jpeg
 .vercel/
 
 data/*.db
+
+data/qdrant/
+data/vault/
