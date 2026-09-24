@@ -1,0 +1,145 @@
+{
+  "machine_id": "sovara-laptop-rtx5060",
+  "model_key": "phi4-mini",
+  "model": "phi4-mini:latest",
+  "timestamp_utc": "2026-09-24T08:31:54.868914+00:00",
+  "settings": {
+    "num_predict": 128,
+    "temperature": 0.2,
+    "top_p": 0.9,
+    "top_k": 20,
+    "repeat_penalty": 1.1
+  },
+  "prompt": "Explain in concise technical terms what a transformer attention mechanism does. Give exactly three numbered points and a one-sentence conclusion.",
+  "cold": {
+    "machine_id": "sovara-laptop-rtx5060",
+    "model": "phi4-mini:latest",
+    "run_type": "cold",
+    "iteration": 1,
+    "timestamp_utc": "2026-09-24T08:31:49.304504+00:00",
+    "success": true,
+    "wall_duration_ms": 26667.007,
+    "ttft_ms": 25339.279,
+    "generated_tokens": 128,
+    "generation_tokens_per_second": 96.357,
+    "ollama": {
+      "total_duration_ns": 26661293200,
+      "load_duration_ns": 15807774100,
+      "prompt_eval_duration_ns": 9486968000,
+      "eval_duration_ns": 1328392000,
+      "prompt_eval_count": 27,
+      "eval_count": 128
+    },
+    "prompt_chars": 145,
+    "output_chars": 680
+  },
+  "warm": [
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "phi4-mini:latest",
+      "run_type": "warm",
+      "iteration": 1,
+      "timestamp_utc": "2026-09-24T08:31:51.111646+00:00",
+      "success": true,
+      "wall_duration_ms": 1806.209,
+      "ttft_ms": 64.56,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 73.664,
+      "ollama": {
+        "total_duration_ns": 1786673400,
+        "load_duration_ns": 10658700,
+        "prompt_eval_duration_ns": 15224000,
+        "eval_duration_ns": 1737622000,
+        "prompt_eval_count": 27,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 680
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "phi4-mini:latest",
+      "run_type": "warm",
+      "iteration": 2,
+      "timestamp_utc": "2026-09-24T08:31:52.964543+00:00",
+      "success": true,
+      "wall_duration_ms": 1852.614,
+      "ttft_ms": 72.777,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 72.069,
+      "ollama": {
+        "total_duration_ns": 1834382200,
+        "load_duration_ns": 20489400,
+        "prompt_eval_duration_ns": 14032000,
+        "eval_duration_ns": 1776069000,
+        "prompt_eval_count": 27,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 658
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "phi4-mini:latest",
+      "run_type": "warm",
+      "iteration": 3,
+      "timestamp_utc": "2026-09-24T08:31:54.868914+00:00",
+      "success": true,
+      "wall_duration_ms": 1904.177,
+      "ttft_ms": 66.547,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 69.876,
+      "ollama": {
+        "total_duration_ns": 1877544300,
+        "load_duration_ns": 10003300,
+        "prompt_eval_duration_ns": 14567000,
+        "eval_duration_ns": 1831807000,
+        "prompt_eval_count": 27,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 728
+    }
+  ],
+  "warm_summary": {
+    "machine_id": "sovara-laptop-rtx5060",
+    "model": "phi4-mini:latest",
+    "measured_runs": 3,
+    "wall_duration_ms": {
+      "count": 3,
+      "min": 1806.209,
+      "max": 1904.177,
+      "mean": 1854.333,
+      "median": 1852.614,
+      "p95": 1852.614,
+      "stddev": 49.007
+    },
+    "ttft_ms": {
+      "count": 3,
+      "min": 64.56,
+      "max": 72.777,
+      "mean": 67.961,
+      "median": 66.547,
+      "p95": 66.547,
+      "stddev": 4.287
+    },
+    "generation_tokens_per_second": {
+      "count": 3,
+      "min": 69.876,
+      "max": 73.664,
+      "mean": 71.87,
+      "median": 72.069,
+      "p95": 72.069,
+      "stddev": 1.902
+    },
+    "generated_tokens": {
+      "count": 3,
+      "min": 128.0,
+      "max": 128.0,
+      "mean": 128.0,
+      "median": 128.0,
+      "p95": 128.0,
+      "stddev": 0.0
+    }
+  }
+}

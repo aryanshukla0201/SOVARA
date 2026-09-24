@@ -1,0 +1,270 @@
+{
+  "machine_id": "sovara-laptop-rtx5060",
+  "timestamp_utc": "2026-09-24T08:33:24.018783+00:00",
+  "results": [
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "phi4-mini:latest",
+      "run_type": "cold",
+      "iteration": 1,
+      "timestamp_utc": "2026-09-24T08:31:49.304504+00:00",
+      "success": true,
+      "wall_duration_ms": 26667.007,
+      "ttft_ms": 25339.279,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 96.357,
+      "ollama": {
+        "total_duration_ns": 26661293200,
+        "load_duration_ns": 15807774100,
+        "prompt_eval_duration_ns": 9486968000,
+        "eval_duration_ns": 1328392000,
+        "prompt_eval_count": 27,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 680
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "phi4-mini:latest",
+      "run_type": "warm",
+      "iteration": 1,
+      "timestamp_utc": "2026-09-24T08:31:51.111646+00:00",
+      "success": true,
+      "wall_duration_ms": 1806.209,
+      "ttft_ms": 64.56,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 73.664,
+      "ollama": {
+        "total_duration_ns": 1786673400,
+        "load_duration_ns": 10658700,
+        "prompt_eval_duration_ns": 15224000,
+        "eval_duration_ns": 1737622000,
+        "prompt_eval_count": 27,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 680
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "phi4-mini:latest",
+      "run_type": "warm",
+      "iteration": 2,
+      "timestamp_utc": "2026-09-24T08:31:52.964543+00:00",
+      "success": true,
+      "wall_duration_ms": 1852.614,
+      "ttft_ms": 72.777,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 72.069,
+      "ollama": {
+        "total_duration_ns": 1834382200,
+        "load_duration_ns": 20489400,
+        "prompt_eval_duration_ns": 14032000,
+        "eval_duration_ns": 1776069000,
+        "prompt_eval_count": 27,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 658
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "phi4-mini:latest",
+      "run_type": "warm",
+      "iteration": 3,
+      "timestamp_utc": "2026-09-24T08:31:54.868914+00:00",
+      "success": true,
+      "wall_duration_ms": 1904.177,
+      "ttft_ms": 66.547,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 69.876,
+      "ollama": {
+        "total_duration_ns": 1877544300,
+        "load_duration_ns": 10003300,
+        "prompt_eval_duration_ns": 14567000,
+        "eval_duration_ns": 1831807000,
+        "prompt_eval_count": 27,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 728
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "qwen2.5-coder:7b-instruct",
+      "run_type": "cold",
+      "iteration": 1,
+      "timestamp_utc": "2026-09-24T08:32:35.828282+00:00",
+      "success": true,
+      "wall_duration_ms": 40913.061,
+      "ttft_ms": 38277.938,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 48.578,
+      "ollama": {
+        "total_duration_ns": 40888225400,
+        "load_duration_ns": 25437165900,
+        "prompt_eval_duration_ns": 12804322000,
+        "eval_duration_ns": 2634932000,
+        "prompt_eval_count": 54,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 641
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "qwen2.5-coder:7b-instruct",
+      "run_type": "warm",
+      "iteration": 1,
+      "timestamp_utc": "2026-09-24T08:32:38.662212+00:00",
+      "success": true,
+      "wall_duration_ms": 2838.04,
+      "ttft_ms": 163.838,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 46.812,
+      "ollama": {
+        "total_duration_ns": 2785547200,
+        "load_duration_ns": 14229100,
+        "prompt_eval_duration_ns": 21741000,
+        "eval_duration_ns": 2734320000,
+        "prompt_eval_count": 54,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 651
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "qwen2.5-coder:7b-instruct",
+      "run_type": "warm",
+      "iteration": 2,
+      "timestamp_utc": "2026-09-24T08:32:41.462770+00:00",
+      "success": true,
+      "wall_duration_ms": 2795.703,
+      "ttft_ms": 128.523,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 48.25,
+      "ollama": {
+        "total_duration_ns": 2772067500,
+        "load_duration_ns": 48353400,
+        "prompt_eval_duration_ns": 22505000,
+        "eval_duration_ns": 2652860000,
+        "prompt_eval_count": 54,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 641
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "qwen2.5-coder:7b-instruct",
+      "run_type": "warm",
+      "iteration": 3,
+      "timestamp_utc": "2026-09-24T08:32:44.186933+00:00",
+      "success": true,
+      "wall_duration_ms": 2723.556,
+      "ttft_ms": 89.77,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 48.203,
+      "ollama": {
+        "total_duration_ns": 2703915000,
+        "load_duration_ns": 7708300,
+        "prompt_eval_duration_ns": 23233000,
+        "eval_duration_ns": 2655415000,
+        "prompt_eval_count": 54,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 652
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "gemma3:4b-it-qat",
+      "run_type": "cold",
+      "iteration": 1,
+      "timestamp_utc": "2026-09-24T08:33:16.407554+00:00",
+      "success": true,
+      "wall_duration_ms": 32180.991,
+      "ttft_ms": 29778.692,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 53.237,
+      "ollama": {
+        "total_duration_ns": 32153152100,
+        "load_duration_ns": 19034727800,
+        "prompt_eval_duration_ns": 10702417000,
+        "eval_duration_ns": 2404332000,
+        "prompt_eval_count": 33,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 690
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "gemma3:4b-it-qat",
+      "run_type": "warm",
+      "iteration": 1,
+      "timestamp_utc": "2026-09-24T08:33:18.881850+00:00",
+      "success": true,
+      "wall_duration_ms": 2473.361,
+      "ttft_ms": 175.221,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 54.199,
+      "ollama": {
+        "total_duration_ns": 2452302200,
+        "load_duration_ns": 9465700,
+        "prompt_eval_duration_ns": 53316000,
+        "eval_duration_ns": 2361686000,
+        "prompt_eval_count": 33,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 686
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "gemma3:4b-it-qat",
+      "run_type": "warm",
+      "iteration": 2,
+      "timestamp_utc": "2026-09-24T08:33:21.426529+00:00",
+      "success": true,
+      "wall_duration_ms": 2543.645,
+      "ttft_ms": 152.216,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 54.343,
+      "ollama": {
+        "total_duration_ns": 2516043400,
+        "load_duration_ns": 23030300,
+        "prompt_eval_duration_ns": 57961000,
+        "eval_duration_ns": 2355416000,
+        "prompt_eval_count": 33,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 676
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "gemma3:4b-it-qat",
+      "run_type": "warm",
+      "iteration": 3,
+      "timestamp_utc": "2026-09-24T08:33:24.013184+00:00",
+      "success": true,
+      "wall_duration_ms": 2503.342,
+      "ttft_ms": 237.511,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 54.127,
+      "ollama": {
+        "total_duration_ns": 2472610800,
+        "load_duration_ns": 22867600,
+        "prompt_eval_duration_ns": 49003000,
+        "eval_duration_ns": 2364819000,
+        "prompt_eval_count": 33,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 703
+    }
+  ]
+}
