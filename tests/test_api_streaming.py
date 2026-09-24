@@ -375,3 +375,112 @@ def test_stream_reconnect_does_not_rerun_running_task(tmp_path):
     assert '"sequence": 1' in body
     assert '"sequence": 2' in body
     assert "should not execute" not in body
+
+def test_analyze_persists_result_and_supports_optional_report():
+    from unittest.mock import patch
+
+    from app.api import routes
+    from app.state.workflow_state import WorkflowState
+
+    with patch.object(routes.WorkflowGraph, "build") as build_mock:
+        workflow = build_mock.return_value
+
+        def fake_invoke(state):
+            return WorkflowState(
+                request_id=state.request_id,
+                task_id=state.task_id,
+                conversation_id=state.conversation_id,
+                user_query=state.user_query,
+                final_answer="P13 integration result",
+                verification_status="passed",
+                verification_results=[],
+                generated_deliverables=[],
+                execution_events=[],
+                execution_telemetry={},
+                execution_trace=[],
+            )
+
+        workflow.invoke.side_effect = fake_invoke
+
+        response = client.post(
+            "/analyze",
+            data={"user_query": "P13 integration test"},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "completed"
+    assert body["task_id"].startswith("task_")
+    assert body["final_answer"] == "P13 integration result"
+
+    recovered = client.get(f"/analysis/{body['request_id']}")
+
+    assert recovered.status_code == 200
+    recovered_body = recovered.json()
+    assert recovered_body["status"] == "completed"
+    assert recovered_body["final_answer"] == "P13 integration result"
+
+    report_response = client.post(
+        f"/tasks/{body['task_id']}/reports",
+        json={"title": "P13 Integration Report"},
+    )
+
+    assert report_response.status_code == 200
+    report = report_response.json()
+    assert report["task_id"] == body["task_id"]
+    assert report["title"] == "P13 Integration Report"
+    assert report["status"] == "completed"
+
+    report_id = report["report_id"]
+    fetched_report = client.get(f"/reports/{report_id}")
+
+    assert fetched_report.status_code == 200
+    assert fetched_report.json()["report_id"] == report_id
+    assert fetched_report.json()["task_id"] == body["task_id"]
+
+
+def test_run_analysis_failure_persists_durable_failure_result():
+    from unittest.mock import patch
+
+    from app.api import routes
+
+    with patch.object(routes.WorkflowGraph, "build") as build_mock:
+        workflow = build_mock.return_value
+        workflow.invoke.side_effect = RuntimeError(
+            "simulated workflow failure"
+        )
+
+        try:
+            routes.run_multimodal_analysis(
+                user_query="P13 failure integration test",
+                files=[],
+            )
+            assert False, "Expected workflow failure"
+        except RuntimeError:
+            pass
+
+    failed_tasks = [
+        task
+        for task in routes.state_manager.list_tasks()
+        if task.status == "failed"
+        and task.goal == "P13 failure integration test"
+    ]
+
+    assert failed_tasks
+
+    task = failed_tasks[-1]
+    request_id = task.metadata["request_id"]
+
+    recovered = client.get(
+        f"/analysis/{request_id}",
+    )
+
+    assert recovered.status_code == 200
+
+    body = recovered.json()
+
+    assert body["request_id"] == request_id
+    assert body["status"] == "failed"
+    assert body["verification_status"] is None
+    assert body["final_answer"] is None
+    assert body["generated_deliverables"] == []
