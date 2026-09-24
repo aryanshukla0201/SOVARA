@@ -30,6 +30,9 @@ class ExecutionTelemetry:
 
     execution_events: list[dict[str, Any]] = field(default_factory=list)
 
+    llm_total_duration_ms: float = 0.0
+    llm_events: list[dict[str, Any]] = field(default_factory=list)
+
     local_inference: bool = True
     processing_location: str = "local"
 
@@ -37,6 +40,12 @@ class ExecutionTelemetry:
         self,
         model_name: str,
         local: bool = True,
+        *,
+        duration_ms: float | None = None,
+        success: bool = True,
+        input_chars: int | None = None,
+        output_chars: int | None = None,
+        **metrics: Any,
     ) -> None:
         self.llm_calls += 1
 
@@ -47,6 +56,22 @@ class ExecutionTelemetry:
             self.external_api_calls += 1
             self.local_inference = False
             self.processing_location = "external"
+
+        if duration_ms is not None:
+            duration_ms = max(0.0, float(duration_ms))
+            self.llm_total_duration_ms += duration_ms
+
+        event: dict[str, Any] = {
+            "type": "llm_call",
+            "model_name": model_name,
+            "duration_ms": duration_ms,
+            "success": bool(success),
+            "input_chars": input_chars,
+            "output_chars": output_chars,
+        }
+
+        event.update(metrics)
+        self.llm_events.append(event)
 
     def record_external_api_call(self) -> None:
         self.external_api_calls += 1
@@ -95,11 +120,20 @@ class ExecutionTelemetry:
         self.files_processed += 1
 
     def summary(self) -> dict[str, Any]:
+        average_duration_ms = (
+            self.llm_total_duration_ms / self.llm_calls
+            if self.llm_calls > 0
+            else 0.0
+        )
+
         return {
             "local_inference": self.local_inference,
             "processing_location": self.processing_location,
             "models_used": self.models_used,
             "llm_calls": self.llm_calls,
+            "llm_total_duration_ms": self.llm_total_duration_ms,
+            "llm_average_duration_ms": average_duration_ms,
+            "llm_events": self.llm_events,
             "external_api_calls": self.external_api_calls,
             "network_calls": self.network_calls,
             "cloud_uploads": self.cloud_uploads,

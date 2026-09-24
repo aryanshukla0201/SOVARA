@@ -13,9 +13,13 @@ class QwenCoderAdapter(OllamaAdapter):
         model_name: str | None = None,
         base_url: str | None = None,
         telemetry=None,
+        performance_callback=None,
+        budget_governor=None,
     ):
         super().__init__(
             model_name=model_name or self.DEFAULT_MODEL,
             base_url=base_url,
             telemetry=telemetry,
+            performance_callback=performance_callback,
+            budget_governor=budget_governor,
         )

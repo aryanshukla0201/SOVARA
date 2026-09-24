@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from app.models.model_factory import ModelFactory
+from app.models.gateway import ModelGateway
 from app.services.execution_telemetry import ExecutionTelemetry
 from app.services.context_manager import ContextManager
 
@@ -16,10 +16,9 @@ class SynthesisNode:
         self.telemetry = telemetry
         self.context_manager = ContextManager()
 
-        self.model = model or ModelFactory.create(
-            "reasoning",
+        self.model = model or ModelGateway(
             telemetry=telemetry,
-        )
+        ).resolve("reasoning")
 
     def run(
         self,

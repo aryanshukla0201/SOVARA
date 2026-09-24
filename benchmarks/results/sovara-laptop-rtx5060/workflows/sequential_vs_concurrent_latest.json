@@ -1,0 +1,252 @@
+{
+  "run_id": "20260924T153439Z",
+  "machine_id": "sovara-laptop-rtx5060",
+  "workload": "e2e_simple_analysis",
+  "task_count": 4,
+  "query": "Explain in concise technical terms how transformer attention works. Give exactly three numbered points and a one-sentence conclusion.",
+  "comparison": {
+    "sequential_batch_wall_ms": 59932.36850000176,
+    "concurrent_batch_wall_ms": 19822.70190000054,
+    "batch_speedup": 3.0234207628375893
+  },
+  "sequential": {
+    "success_count": 4,
+    "failure_count": 0,
+    "task_wall_stats_ms": {
+      "count": 4,
+      "min": 11616.876899999625,
+      "max": 23654.105300000083,
+      "mean": 14983.07879999993,
+      "median": 12330.666500000007,
+      "p95": 22019.568290000094,
+      "stddev": 5023.754712546756
+    },
+    "results": [
+      {
+        "task_index": 1,
+        "mode": "sequential",
+        "success": true,
+        "failure_type": null,
+        "wall_duration_ms": 23654.105300000083,
+        "verification_status": "passed",
+        "llm_duration_ms": null,
+        "llm_calls": 2,
+        "models_used": [
+          "phi4-mini:latest"
+        ]
+      },
+      {
+        "task_index": 2,
+        "mode": "sequential",
+        "success": true,
+        "failure_type": null,
+        "wall_duration_ms": 11616.876899999625,
+        "verification_status": "passed",
+        "llm_duration_ms": null,
+        "llm_calls": 2,
+        "models_used": [
+          "phi4-mini:latest"
+        ]
+      },
+      {
+        "task_index": 3,
+        "mode": "sequential",
+        "success": true,
+        "failure_type": null,
+        "wall_duration_ms": 11904.141099999833,
+        "verification_status": "passed",
+        "llm_duration_ms": null,
+        "llm_calls": 2,
+        "models_used": [
+          "phi4-mini:latest"
+        ]
+      },
+      {
+        "task_index": 4,
+        "mode": "sequential",
+        "success": true,
+        "failure_type": null,
+        "wall_duration_ms": 12757.19190000018,
+        "verification_status": "passed",
+        "llm_duration_ms": null,
+        "llm_calls": 2,
+        "models_used": [
+          "phi4-mini:latest"
+        ]
+      }
+    ]
+  },
+  "concurrent": {
+    "success_count": 4,
+    "failure_count": 0,
+    "task_wall_stats_ms": {
+      "count": 4,
+      "min": 13361.922200001572,
+      "max": 19819.82430000062,
+      "mean": 16864.787175000856,
+      "median": 17138.701100000617,
+      "p95": 19541.00383500063,
+      "stddev": 2371.9604662361785
+    },
+    "results": [
+      {
+        "task_index": 1,
+        "mode": "concurrent",
+        "success": true,
+        "failure_type": null,
+        "wall_duration_ms": 13361.922200001572,
+        "verification_status": "passed",
+        "llm_duration_ms": null,
+        "llm_calls": 2,
+        "models_used": [
+          "phi4-mini:latest"
+        ]
+      },
+      {
+        "task_index": 2,
+        "mode": "concurrent",
+        "success": true,
+        "failure_type": null,
+        "wall_duration_ms": 16316.381000000547,
+        "verification_status": "passed",
+        "llm_duration_ms": null,
+        "llm_calls": 2,
+        "models_used": [
+          "phi4-mini:latest"
+        ]
+      },
+      {
+        "task_index": 3,
+        "mode": "concurrent",
+        "success": true,
+        "failure_type": null,
+        "wall_duration_ms": 17961.021200000687,
+        "verification_status": "passed",
+        "llm_duration_ms": null,
+        "llm_calls": 2,
+        "models_used": [
+          "phi4-mini:latest"
+        ]
+      },
+      {
+        "task_index": 4,
+        "mode": "concurrent",
+        "success": true,
+        "failure_type": null,
+        "wall_duration_ms": 19819.82430000062,
+        "verification_status": "passed",
+        "llm_duration_ms": null,
+        "llm_calls": 2,
+        "models_used": [
+          "phi4-mini:latest"
+        ]
+      }
+    ]
+  },
+  "raw_runs": [
+    {
+      "task_index": 1,
+      "mode": "sequential",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 23654.105300000083,
+      "verification_status": "passed",
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "models_used": [
+        "phi4-mini:latest"
+      ]
+    },
+    {
+      "task_index": 2,
+      "mode": "sequential",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 11616.876899999625,
+      "verification_status": "passed",
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "models_used": [
+        "phi4-mini:latest"
+      ]
+    },
+    {
+      "task_index": 3,
+      "mode": "sequential",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 11904.141099999833,
+      "verification_status": "passed",
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "models_used": [
+        "phi4-mini:latest"
+      ]
+    },
+    {
+      "task_index": 4,
+      "mode": "sequential",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 12757.19190000018,
+      "verification_status": "passed",
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "models_used": [
+        "phi4-mini:latest"
+      ]
+    },
+    {
+      "task_index": 1,
+      "mode": "concurrent",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 13361.922200001572,
+      "verification_status": "passed",
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "models_used": [
+        "phi4-mini:latest"
+      ]
+    },
+    {
+      "task_index": 2,
+      "mode": "concurrent",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 16316.381000000547,
+      "verification_status": "passed",
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "models_used": [
+        "phi4-mini:latest"
+      ]
+    },
+    {
+      "task_index": 3,
+      "mode": "concurrent",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 17961.021200000687,
+      "verification_status": "passed",
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "models_used": [
+        "phi4-mini:latest"
+      ]
+    },
+    {
+      "task_index": 4,
+      "mode": "concurrent",
+      "success": true,
+      "failure_type": null,
+      "wall_duration_ms": 19819.82430000062,
+      "verification_status": "passed",
+      "llm_duration_ms": null,
+      "llm_calls": 2,
+      "models_used": [
+        "phi4-mini:latest"
+      ]
+    }
+  ]
+}

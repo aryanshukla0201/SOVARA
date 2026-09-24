@@ -1,0 +1,20 @@
+{
+  "machine_id": "sovara-laptop-rtx5060",
+  "hostname": "Mysterious",
+  "timestamp_utc": "2026-09-24T08:24:50.113448+00:00",
+  "os": "Windows-10-10.0.26200-SP0",
+  "python": "3.11.15",
+  "cpu": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+  "logical_cpus": 28,
+  "physical_cpus": 20,
+  "ram_mb": 16092,
+  "git_commit": "a777fcb1e06970f067de258cfa3aee366fa39343",
+  "gpus": [
+    {
+      "name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+      "vram_mb": 8151,
+      "driver_version": "610.74"
+    }
+  ],
+  "working_directory": "C:\\Users\\ARYAN\\OneDrive\\Desktop\\AI\\GEN-AI\\SOVARA"
+}

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.models.model_factory import ModelFactory
+from app.models.gateway import ModelGateway
 from app.state.task_state import TaskState
 from app.services.execution_telemetry import ExecutionTelemetry
 
@@ -26,7 +26,9 @@ class TaskAnalyzer:
     }
 
     def __init__(self, model=None, telemetry: ExecutionTelemetry | None = None):
-        self.model = model or ModelFactory.create("reasoning", telemetry=telemetry)
+        self.model = model or ModelGateway(
+            telemetry=telemetry,
+        ).resolve("reasoning")
 
     def analyze(
         self,

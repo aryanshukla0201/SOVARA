@@ -1,0 +1,58 @@
+# SOVARA V2 - P12 Report Backend Contract
+
+
+
+## Purpose
+
+
+
+Reports are optional downstream deliverables.
+
+
+
+Normal task flow:
+
+
+
+User Request ???????? Workflow ???????? Task Result ???????? Evidence / Verification ???????? Done
+
+
+
+Explicit report flow:
+
+
+
+Completed Task ???????? Report Requested ???????? Report Composition ???????? Structured Report ???????? Web Reader / Export
+
+
+
+A normal task MUST NOT generate a report automatically.
+
+
+
+## Endpoints
+
+
+
+### Create Report
+
+
+
+POST `/tasks/{task\_id}/reports`
+
+
+
+Request:
+
+
+
+```json
+
+{
+
+&#x20; "title": "Optional title",
+
+&#x20; "subtitle": "Optional subtitle"
+
+}
+

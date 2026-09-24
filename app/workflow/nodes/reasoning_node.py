@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 
-from app.models.model_factory import ModelFactory
+from app.models.gateway import ModelGateway
+from app.models.response_budget import get_reasoning_budget
 from app.services.context_manager import ContextManager
 from app.services.execution_telemetry import ExecutionTelemetry
 
@@ -10,15 +11,15 @@ from app.services.execution_telemetry import ExecutionTelemetry
 class ReasoningNode:
     def __init__(
         self,
+        model=None,
         telemetry: ExecutionTelemetry | None = None,
     ):
         self.telemetry = telemetry
         self.context_manager = ContextManager()
 
-        self.model = ModelFactory.create(
-            "reasoning",
+        self.model = model or ModelGateway(
             telemetry=telemetry,
-        )
+        ).resolve("reasoning")
     @staticmethod
     def _normalize_citations(answer: str, evidence_ids: list[str]) -> str:
         """Normalize common LLM citation placeholders when exactly one
@@ -40,7 +41,7 @@ class ReasoningNode:
             f"[{evidence_id}]",
             answer,
         )
-    
+
     def run(
         self,
         user_query: str,
@@ -99,6 +100,7 @@ RULES:
                     "Do not require evidence or citations unless evidence "
                     "is explicitly supplied."
                 ),
+                num_predict=get_reasoning_budget(),
             )
 
             if not answer.strip():
@@ -192,7 +194,7 @@ RESULT:
         )}
         """
             )
-                
+
         for item in vision_results:
             if not isinstance(item, dict):
                 continue
@@ -285,7 +287,7 @@ CONTENT:
             )
 
         evidence_context = "\n".join(evidence_context_parts)
-        
+
         prompt = f"""
 USER REQUEST:
 {user_query}
@@ -348,9 +350,19 @@ Return ONLY the final human-readable answer.
                 "Never invent or modify evidence IDs. "
                 "Return only human-readable text with valid evidence citations. "
             ),
-            num_predict=2048,
+            num_predict=get_reasoning_budget(
+                evidence_count=len(evidence),
+                data_result_count=len(data_results),
+                code_result_count=len(code_results),
+                vision_result_count=len(vision_results),
+            ),
             temperature=0.2,
         )
+
+        print("\n========== RAW REASONING OUTPUT ==========")
+        print(answer)
+        print("==========================================\n")
+
         authoritative_ids = []
 
         for item in evidence:

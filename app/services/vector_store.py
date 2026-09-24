@@ -118,18 +118,30 @@ class VectorStore:
         query_vector,
         limit=5,
         source_file_id=None,
+        filters: dict[str, Any] | None = None,
     ):
-        query_filter = None
+        conditions = []
 
         if source_file_id:
-            query_filter = Filter(
-                must=[
-                    FieldCondition(
-                        key="source_file_id",
-                        match=MatchValue(value=source_file_id),
-                    )
-                ]
+            conditions.append(
+                FieldCondition(
+                    key="source_file_id",
+                    match=MatchValue(value=source_file_id),
+                )
             )
+
+        for key, value in (filters or {}).items():
+            if value is None:
+                continue
+
+            conditions.append(
+                FieldCondition(
+                    key=key,
+                    match=MatchValue(value=value),
+                )
+            )
+
+        query_filter = Filter(must=conditions) if conditions else None
 
         results = self.client.query_points(
             collection_name=self.COLLECTION_NAME,
@@ -159,3 +171,47 @@ class VectorStore:
                 )
             ),
         )
+    def list_records(
+        self,
+        source_file_id: str | None = None,
+        limit: int = 1000,
+        filters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        if limit <= 0:
+            return []
+
+        conditions = []
+
+        if source_file_id:
+            conditions.append(
+                FieldCondition(
+                    key="source_file_id",
+                    match=MatchValue(value=source_file_id),
+                )
+            )
+
+        for key, value in (filters or {}).items():
+            if value is None:
+                continue
+
+            conditions.append(
+                FieldCondition(
+                    key=key,
+                    match=MatchValue(value=value),
+                )
+            )
+
+        scroll_filter = Filter(must=conditions) if conditions else None
+
+        records, _ = self.client.scroll(
+            collection_name=self.COLLECTION_NAME,
+            scroll_filter=scroll_filter,
+            limit=limit,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        return [
+            dict(record.payload or {})
+            for record in records
+        ]

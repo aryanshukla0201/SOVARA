@@ -1,0 +1,145 @@
+{
+  "machine_id": "sovara-laptop-rtx5060",
+  "model_key": "gemma3",
+  "model": "gemma3:4b-it-qat",
+  "timestamp_utc": "2026-09-24T08:33:24.015196+00:00",
+  "settings": {
+    "num_predict": 128,
+    "temperature": 0.2,
+    "top_p": 0.9,
+    "top_k": 20,
+    "repeat_penalty": 1.1
+  },
+  "prompt": "Explain in concise technical terms what a transformer attention mechanism does. Give exactly three numbered points and a one-sentence conclusion.",
+  "cold": {
+    "machine_id": "sovara-laptop-rtx5060",
+    "model": "gemma3:4b-it-qat",
+    "run_type": "cold",
+    "iteration": 1,
+    "timestamp_utc": "2026-09-24T08:33:16.407554+00:00",
+    "success": true,
+    "wall_duration_ms": 32180.991,
+    "ttft_ms": 29778.692,
+    "generated_tokens": 128,
+    "generation_tokens_per_second": 53.237,
+    "ollama": {
+      "total_duration_ns": 32153152100,
+      "load_duration_ns": 19034727800,
+      "prompt_eval_duration_ns": 10702417000,
+      "eval_duration_ns": 2404332000,
+      "prompt_eval_count": 33,
+      "eval_count": 128
+    },
+    "prompt_chars": 145,
+    "output_chars": 690
+  },
+  "warm": [
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "gemma3:4b-it-qat",
+      "run_type": "warm",
+      "iteration": 1,
+      "timestamp_utc": "2026-09-24T08:33:18.881850+00:00",
+      "success": true,
+      "wall_duration_ms": 2473.361,
+      "ttft_ms": 175.221,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 54.199,
+      "ollama": {
+        "total_duration_ns": 2452302200,
+        "load_duration_ns": 9465700,
+        "prompt_eval_duration_ns": 53316000,
+        "eval_duration_ns": 2361686000,
+        "prompt_eval_count": 33,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 686
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "gemma3:4b-it-qat",
+      "run_type": "warm",
+      "iteration": 2,
+      "timestamp_utc": "2026-09-24T08:33:21.426529+00:00",
+      "success": true,
+      "wall_duration_ms": 2543.645,
+      "ttft_ms": 152.216,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 54.343,
+      "ollama": {
+        "total_duration_ns": 2516043400,
+        "load_duration_ns": 23030300,
+        "prompt_eval_duration_ns": 57961000,
+        "eval_duration_ns": 2355416000,
+        "prompt_eval_count": 33,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 676
+    },
+    {
+      "machine_id": "sovara-laptop-rtx5060",
+      "model": "gemma3:4b-it-qat",
+      "run_type": "warm",
+      "iteration": 3,
+      "timestamp_utc": "2026-09-24T08:33:24.013184+00:00",
+      "success": true,
+      "wall_duration_ms": 2503.342,
+      "ttft_ms": 237.511,
+      "generated_tokens": 128,
+      "generation_tokens_per_second": 54.127,
+      "ollama": {
+        "total_duration_ns": 2472610800,
+        "load_duration_ns": 22867600,
+        "prompt_eval_duration_ns": 49003000,
+        "eval_duration_ns": 2364819000,
+        "prompt_eval_count": 33,
+        "eval_count": 128
+      },
+      "prompt_chars": 145,
+      "output_chars": 703
+    }
+  ],
+  "warm_summary": {
+    "machine_id": "sovara-laptop-rtx5060",
+    "model": "gemma3:4b-it-qat",
+    "measured_runs": 3,
+    "wall_duration_ms": {
+      "count": 3,
+      "min": 2473.361,
+      "max": 2543.645,
+      "mean": 2506.783,
+      "median": 2503.342,
+      "p95": 2503.342,
+      "stddev": 35.268
+    },
+    "ttft_ms": {
+      "count": 3,
+      "min": 152.216,
+      "max": 237.511,
+      "mean": 188.316,
+      "median": 175.221,
+      "p95": 175.221,
+      "stddev": 44.13
+    },
+    "generation_tokens_per_second": {
+      "count": 3,
+      "min": 54.127,
+      "max": 54.343,
+      "mean": 54.223,
+      "median": 54.199,
+      "p95": 54.199,
+      "stddev": 0.11
+    },
+    "generated_tokens": {
+      "count": 3,
+      "min": 128.0,
+      "max": 128.0,
+      "mean": 128.0,
+      "median": 128.0,
+      "p95": 128.0,
+      "stddev": 0.0
+    }
+  }
+}
