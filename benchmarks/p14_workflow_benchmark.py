@@ -4,6 +4,7 @@ import json
 import statistics
 import subprocess
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -13,6 +14,10 @@ OUTPUT_DIR = Path("benchmarks/results/sovara-laptop-rtx5060/workflows")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 MODEL = "phi4-mini:latest"
+WORKLOAD = "simple_planning"
+
+COLD_RUNS = 1
+WARM_RUNS = 7
 
 PROMPT = """
 Analyze this task and produce a concise execution plan.
@@ -41,9 +46,12 @@ def gpu_sample():
             timeout=5,
             check=True,
         )
+
         line = result.stdout.strip().splitlines()[0]
         util, used, total = [float(x.strip()) for x in line.split(",")]
+
         return util, used, total
+
     except Exception:
         return None, None, None
 
@@ -65,7 +73,22 @@ def resource_sample():
     }
 
 
-def run_once(iteration: int):
+def unload_model():
+    response = requests.post(
+        OLLAMA_URL,
+        json={
+            "model": MODEL,
+            "prompt": "",
+            "stream": False,
+            "keep_alive": 0,
+        },
+        timeout=60,
+    )
+
+    response.raise_for_status()
+
+
+def run_once(iteration: int, phase: str):
     before = resource_sample()
     start = time.perf_counter()
 
@@ -104,9 +127,11 @@ def run_once(iteration: int):
 
     return {
         "iteration": iteration,
+        "phase": phase,
         "model": MODEL,
-        "workload": "simple_planning",
+        "workload": WORKLOAD,
         "success": True,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "wall_duration_ms": wall_ms,
         "ollama_total_duration_ms": data.get("total_duration", 0) / 1_000_000,
         "ollama_load_duration_ms": data.get("load_duration", 0) / 1_000_000,
@@ -119,62 +144,168 @@ def run_once(iteration: int):
         "cpu_after_percent": after["cpu_percent"],
         "memory_before_mb": before["memory_used_mb"],
         "memory_after_mb": after["memory_used_mb"],
+        "memory_before_percent": before["memory_percent"],
+        "memory_after_percent": after["memory_percent"],
         "gpu_util_before_percent": before["gpu_utilization_percent"],
         "gpu_util_after_percent": after["gpu_utilization_percent"],
         "gpu_memory_before_mb": before["gpu_memory_used_mb"],
         "gpu_memory_after_mb": after["gpu_memory_used_mb"],
         "gpu_memory_total_mb": after["gpu_memory_total_mb"],
+        "gpu_memory_delta_mb": (
+            after["gpu_memory_used_mb"] - before["gpu_memory_used_mb"]
+            if after["gpu_memory_used_mb"] is not None
+            and before["gpu_memory_used_mb"] is not None
+            else None
+        ),
         "output_chars": len(data.get("response", "")),
+    }
+
+
+def percentile(values, percentile_value):
+    if not values:
+        return None
+
+    ordered = sorted(values)
+
+    if len(ordered) == 1:
+        return ordered[0]
+
+    position = (len(ordered) - 1) * (percentile_value / 100)
+    lower = int(position)
+    upper = min(lower + 1, len(ordered) - 1)
+    weight = position - lower
+
+    return ordered[lower] + (ordered[upper] - ordered[lower]) * weight
+
+
+def statistics_block(values):
+    if not values:
+        return {}
+
+    return {
+        "count": len(values),
+        "min": min(values),
+        "max": max(values),
+        "mean": statistics.mean(values),
+        "median": statistics.median(values),
+        "p95": percentile(values, 95),
+        "stddev": statistics.stdev(values) if len(values) > 1 else 0.0,
+    }
+
+
+def summarize(results, phase):
+    phase_results = [
+        result
+        for result in results
+        if result["phase"] == phase and result["success"]
+    ]
+
+    walls = [result["wall_duration_ms"] for result in phase_results]
+
+    tps = [
+        result["generation_tps"]
+        for result in phase_results
+        if result["generation_tps"] is not None
+    ]
+
+    load_times = [
+        result["ollama_load_duration_ms"]
+        for result in phase_results
+    ]
+
+    gpu_deltas = [
+        result["gpu_memory_delta_mb"]
+        for result in phase_results
+        if result["gpu_memory_delta_mb"] is not None
+    ]
+
+    return {
+        "phase": phase,
+        "statistics": {
+            "wall_duration_ms": statistics_block(walls),
+            "generation_tps": statistics_block(tps),
+            "ollama_load_duration_ms": statistics_block(load_times),
+            "gpu_memory_delta_mb": statistics_block(gpu_deltas),
+        },
     }
 
 
 def main():
     results = []
 
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
     print("P14 workflow benchmark")
     print(f"Model: {MODEL}")
-    print("Workload: simple_planning")
+    print(f"Workload: {WORKLOAD}")
+    print(f"Cold runs: {COLD_RUNS}")
+    print(f"Warm runs: {WARM_RUNS}")
+    print(f"Run ID: {run_id}")
     print()
 
-    for iteration in range(1, 4):
-        print(f"Running iteration {iteration}/3...")
-        result = run_once(iteration)
+    for iteration in range(1, COLD_RUNS + 1):
+        print(f"Running cold iteration {iteration}/{COLD_RUNS}...")
+
+        unload_model()
+
+        result = run_once(iteration, "cold")
         results.append(result)
 
         print(
             f"  wall={result['wall_duration_ms']:.1f} ms | "
-            f"TPS={result['generation_tps']:.2f} | "
-            f"eval_tokens={result['eval_count']}"
+            f"load={result['ollama_load_duration_ms']:.1f} ms | "
+            f"TPS={result['generation_tps']:.2f}"
         )
 
-    walls = [r["wall_duration_ms"] for r in results]
-    tps = [r["generation_tps"] for r in results if r["generation_tps"]]
+    for iteration in range(1, WARM_RUNS + 1):
+        print(f"Running warm iteration {iteration}/{WARM_RUNS}...")
+
+        result = run_once(iteration, "warm")
+        results.append(result)
+
+        print(
+            f"  wall={result['wall_duration_ms']:.1f} ms | "
+            f"TPS={result['generation_tps']:.2f}"
+        )
 
     summary = {
+        "run_id": run_id,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "model": MODEL,
-        "workload": "simple_planning",
-        "iterations": len(results),
-        "wall_duration_ms": {
-            "min": min(walls),
-            "max": max(walls),
-            "mean": statistics.mean(walls),
-            "median": statistics.median(walls),
+        "workload": WORKLOAD,
+        "configuration": {
+            "cold_runs": COLD_RUNS,
+            "warm_runs": WARM_RUNS,
+            "num_predict": 256,
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "top_k": 20,
+            "repeat_penalty": 1.1,
+            "keep_alive": "30m",
         },
-        "generation_tps": {
-            "min": min(tps),
-            "max": max(tps),
-            "mean": statistics.mean(tps),
-            "median": statistics.median(tps),
-        },
+        "cold": summarize(results, "cold"),
+        "warm": summarize(results, "warm"),
         "runs": results,
     }
 
-    output = OUTPUT_DIR / "simple_planning_phi4-mini.json"
-    output.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    output = OUTPUT_DIR / f"{WORKLOAD}_{MODEL.replace(':', '_')}_{run_id}.json"
+
+    output.write_text(
+        json.dumps(summary, indent=2),
+        encoding="utf-8",
+    )
+
+    latest = OUTPUT_DIR / f"{WORKLOAD}_{MODEL.replace(':', '_')}_latest.json"
+
+    latest.write_text(
+        json.dumps(summary, indent=2),
+        encoding="utf-8",
+    )
 
     print()
     print("PASS")
-    print(f"Saved: {output}")
+    print(f"Raw benchmark: {output}")
+    print(f"Latest pointer: {latest}")
 
 
 if __name__ == "__main__":
