@@ -1,10 +1,49 @@
+from pathlib import Path
+
+import pytest
+
 from app.services.vector_store import VectorStore
 
 
-def test_list_records_returns_payloads():
-    store = VectorStore()
+@pytest.fixture
+def vector_store(tmp_path: Path):
+    VectorStore._client = None
 
-    records = store.list_records(limit=3)
+    store = VectorStore(path=str(tmp_path / "qdrant"))
+
+    store.upsert_evidence(
+        [
+            {
+                "evidence_id": "test_001",
+                "source_file_id": "file_3d501bed",
+                "page_number": 1,
+                "content": "test content one",
+                "embedding": [0.1] * VectorStore.VECTOR_SIZE,
+            },
+            {
+                "evidence_id": "test_002",
+                "source_file_id": "file_c20c028c",
+                "page_number": 1,
+                "content": "test content two",
+                "embedding": [0.2] * VectorStore.VECTOR_SIZE,
+            },
+            {
+                "evidence_id": "test_003",
+                "source_file_id": "file_other",
+                "page_number": 2,
+                "content": "test content three",
+                "embedding": [0.3] * VectorStore.VECTOR_SIZE,
+            },
+        ]
+    )
+
+    yield store
+
+    VectorStore._client = None
+
+
+def test_list_records_returns_payloads(vector_store):
+    records = vector_store.list_records(limit=3)
 
     assert len(records) <= 3
     assert all(isinstance(record, dict) for record in records)
@@ -14,18 +53,14 @@ def test_list_records_returns_payloads():
         assert "content" in records[0]
 
 
-def test_list_records_respects_limit():
-    store = VectorStore()
-
-    records = store.list_records(limit=1)
+def test_list_records_respects_limit(vector_store):
+    records = vector_store.list_records(limit=1)
 
     assert len(records) <= 1
 
 
-def test_list_records_filters_by_source_file_id():
-    store = VectorStore()
-
-    records = store.list_records(
+def test_list_records_filters_by_source_file_id(vector_store):
+    records = vector_store.list_records(
         source_file_id="file_3d501bed",
         limit=10,
     )
@@ -34,16 +69,13 @@ def test_list_records_filters_by_source_file_id():
     assert records[0]["source_file_id"] == "file_3d501bed"
 
 
-def test_list_records_handles_invalid_limit():
-    store = VectorStore()
+def test_list_records_handles_invalid_limit(vector_store):
+    assert vector_store.list_records(limit=0) == []
+    assert vector_store.list_records(limit=-1) == []
 
-    assert store.list_records(limit=0) == []
-    assert store.list_records(limit=-1) == []
 
-def test_list_records_filters_by_metadata():
-    store = VectorStore()
-
-    records = store.list_records(
+def test_list_records_filters_by_metadata(vector_store):
+    records = vector_store.list_records(
         filters={"page_number": 1},
         limit=10,
     )
@@ -55,10 +87,8 @@ def test_list_records_filters_by_metadata():
     )
 
 
-def test_list_records_filters_by_multiple_metadata_fields():
-    store = VectorStore()
-
-    records = store.list_records(
+def test_list_records_filters_by_multiple_metadata_fields(vector_store):
+    records = vector_store.list_records(
         filters={
             "source_file_id": "file_c20c028c",
             "page_number": 1,
@@ -71,16 +101,15 @@ def test_list_records_filters_by_multiple_metadata_fields():
     assert records[0]["page_number"] == 1
 
 
-def test_list_records_empty_filters_behave_like_no_filter():
-    store = VectorStore()
-
-    records_without_filter = store.list_records(limit=3)
-    records_with_empty_filter = store.list_records(
+def test_list_records_empty_filters_behave_like_no_filter(vector_store):
+    records_without_filter = vector_store.list_records(limit=3)
+    records_with_empty_filter = vector_store.list_records(
         filters={},
         limit=3,
     )
 
     assert records_with_empty_filter == records_without_filter
+
 
 class FakeQueryClient:
     def __init__(self):
