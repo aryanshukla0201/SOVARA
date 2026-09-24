@@ -5,6 +5,9 @@ import hashlib
 from app.services.embedding_service import EmbeddingService
 from app.services.vector_store import VectorStore
 from app.state.evidence import EvidenceRecord
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class DocumentRetriever:
@@ -88,9 +91,9 @@ class DocumentRetriever:
 
         if items_to_embed:
 
-            print(
-                f"[RETRIEVAL CACHE] embedding "
-                f"{len(items_to_embed)} new/changed chunks"
+            logger.info(
+                "[RETRIEVAL CACHE] embedding %s new/changed chunks",
+                len(items_to_embed),
             )
 
             embedded = EmbeddingService.embed_evidence(
@@ -102,7 +105,7 @@ class DocumentRetriever:
             )
 
         else:
-            print(
+            logger.info(
                 "[RETRIEVAL CACHE] all chunks already indexed; "
                 "skipping embedding"
             )
