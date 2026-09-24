@@ -15,15 +15,6 @@ class CitationValidator:
         # [file_123_ev_001]
         cited_ids = re.findall(r"\[([^\]]+)\]", answer)
 
-        print("\n===== CITATION DEBUG =====")
-        print("ANSWER:")
-        print(answer)
-        print("CITED IDS:")
-        print(cited_ids)
-        print("VALID EVIDENCE IDS:")
-        print(evidence_ids)
-        print("==========================")
-
         # Evidence-backed answers must contain at least one citation.
         if not cited_ids:
             return False

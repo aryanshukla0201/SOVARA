@@ -8,6 +8,9 @@ from typing import Any
 
 import fitz
 from paddleocr import PaddleOCR
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class PDFParser:
@@ -84,9 +87,10 @@ class PDFParser:
                             text = ocr_text.strip()
 
                     except Exception as exc:
-                        print(
-                            f"[OCR WARNING] "
-                            f"Page {page_num + 1}: {exc}"
+                        logger.warning(
+                            "[OCR WARNING] Page %s: %s",
+                            page_num + 1,
+                            exc,
                         )
 
                 pages.append(

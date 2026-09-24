@@ -75,7 +75,7 @@ def get_approval(approval_id: str) -> dict:
 def list_task_approvals(task_id: str) -> dict:
     try:
         state_manager.require_task(task_id)
-    except Exception:
+    except KeyError:
         raise HTTPException(
             status_code=404,
             detail="Task not found.",

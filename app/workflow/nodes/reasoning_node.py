@@ -336,10 +336,6 @@ If the evidence does not establish something, say so.
 Return ONLY the final human-readable answer.
 """
 
-        print("\n===== REASONING PROMPT DEBUG =====")
-        print(prompt)
-        print("===== END REASONING PROMPT DEBUG =====\n")
-
         answer = self.model.generate(
             prompt,
             system_prompt=(
@@ -358,10 +354,6 @@ Return ONLY the final human-readable answer.
             ),
             temperature=0.2,
         )
-
-        print("\n========== RAW REASONING OUTPUT ==========")
-        print(answer)
-        print("==========================================\n")
 
         authoritative_ids = []
 

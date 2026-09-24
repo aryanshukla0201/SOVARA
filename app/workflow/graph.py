@@ -100,16 +100,6 @@ class WorkflowGraph:
             input_types,
         )
 
-        print(
-            "\n[TASK DEBUG]",
-            "query=", state.user_query,
-            "intent=", state.task_state.intent,
-            "requires_rag=", state.task_state.requires_rag,
-            "capabilities=", state.task_state.required_capabilities,
-            "requires_synthesis=", state.task_state.requires_synthesis,
-            "\n"
-        )
-
         self._trace(
             state,
             node_name="task_analyzer",
@@ -160,18 +150,6 @@ class WorkflowGraph:
             item.model_dump() if hasattr(item, "model_dump") else item
             for item in evidence
         ]
-        print("\n[VAULT DEBUG]")
-        for item in state.retrieved_evidence:
-            print(
-                item.get("evidence_id"),
-                "|",
-                item.get("relevance_score"),
-                "|",
-                item.get("source_filename"),
-                "|",
-                item.get("content", "")[:200],
-            )
-        print("[VAULT DEBUG END]\n")
         self.telemetry.record_tool("KnowledgeVault")
         return state
 
@@ -221,11 +199,6 @@ class WorkflowGraph:
             state.retrieved_evidence.extend(
                 [item.model_dump() for item in evidence]
             )
-
-            print("\n===== RETRIEVED DOCUMENT EVIDENCE =====")
-            for item in evidence:
-                print(item.model_dump())
-            print("========================================\n")
 
             if file_record.file_type == "pdf":
                 pages = len(
@@ -396,8 +369,6 @@ class WorkflowGraph:
                     "method": "deterministic_document_fact_extraction",
                 }
             )
-
-            print("DEBUG document_fact_results:", state.document_fact_results)
 
             self._trace(
                 state,
@@ -600,7 +571,6 @@ class WorkflowGraph:
                     tools_used=["answer_selection"],
                     relevant_output_ids=["final_answer"],
                 )
-                print("[GRAPH DEBUG] final_answer -> verifier")
                 return state
 
         # Case 2: Use the reasoning result
@@ -619,7 +589,6 @@ class WorkflowGraph:
                     tools_used=["answer_selection"],
                     relevant_output_ids=["final_answer"],
                 )
-                print("[GRAPH DEBUG] final_answer -> verifier")
                 return state
 
         # Case 3: Fallback for deterministic analysis
@@ -637,7 +606,6 @@ class WorkflowGraph:
             tools_used=["answer_selection"],
             relevant_output_ids=["final_answer"],
         )
-        print("[GRAPH DEBUG] final_answer -> verifier")
         return state
 
     def _verifier(self, state: WorkflowState) -> WorkflowState:
@@ -678,10 +646,6 @@ class WorkflowGraph:
             "passed",
         )
 
-        print("\n===== VERIFIER RESULT =====")
-        print(verification)
-        print("===========================\n")
-
         state.verification_results = [verification]
         state.verification_status = verification_status
 
@@ -700,35 +664,18 @@ class WorkflowGraph:
             ],
         )
 
-        print(
-            f"[VERIFIER STATE] "
-            f"verification_status={state.verification_status}"
-        )
-
         return state
 
     def _verification_route(self, state: WorkflowState) -> str:
         if state.verification_status == "passed":
-            print(
-                f"[VERIFICATION ROUTER] status=passed "
-                f"attempts={state.repair_attempts} -> deliverable"
-            )
             return "pass"
 
         if (
             state.verification_status == "failed"
             and state.repair_attempts < self.max_repair_attempts
         ):
-            print(
-                f"[VERIFICATION ROUTER] status=failed "
-                f"attempts={state.repair_attempts} -> repair"
-            )
             return "fail_retry"
 
-        print(
-            f"[VERIFICATION ROUTER] status={state.verification_status} "
-            f"attempts={state.repair_attempts} -> END"
-        )
         return "fail_terminal"
 
     def _repair(self, state: WorkflowState) -> WorkflowState:
