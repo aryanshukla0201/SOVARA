@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 
@@ -309,7 +309,7 @@ class WorkflowGraph:
             self._trace(
                 state,
                 node_name="vision_route",
-                model_used=self._model_name(vision_node.model),
+                model_used=self._model_name(vision_node.analyzer),
                 tools_used=["VisionAnalyzer"],
                 relevant_output_ids=[
                     f"{file_record.file_id}_ev_{index:03d}"

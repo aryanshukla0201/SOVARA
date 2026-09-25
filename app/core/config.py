@@ -18,7 +18,7 @@ class Settings(BaseModel):
     )
 
     gemma_model: str = Field(
-        default_factory=lambda: os.getenv("GEMMA_MODEL", "gemma3:latest")
+        default_factory=lambda: os.getenv("GEMMA_MODEL", "gemma3:4b-it-qat")
     )
 
     ollama_base_url: str = Field(
