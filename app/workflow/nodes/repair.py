@@ -65,7 +65,7 @@ class RepairNode:
 
         validator = CitationValidator()
 
-        if validator.validate(
+        if not failures and validator.validate(
             answer,
             evidence_ids,
         ):
@@ -98,6 +98,7 @@ class RepairNode:
                 item.get("content")
                 or item.get("text")
                 or item.get("description")
+                or item.get("result")
                 or ""
             )
 

@@ -688,11 +688,23 @@ class WorkflowGraph:
             state.verification_status = "failed_terminal"
             return state
 
-        verification_failures = (
-            state.verification_results[0].get("failures", [])
-            if state.verification_results
-            else []
-        )
+        verification_failures = []
+
+        if state.verification_results:
+            verification = state.verification_results[0]
+            verification_failures = list(
+                verification.get("failures", [])
+            )
+
+            numeric_validation = verification.get(
+                "numeric_validation",
+                [],
+            )
+
+            if numeric_validation:
+                verification_failures.append(
+                    f"numeric_validation_details: {numeric_validation}"
+                )
 
         verification_evidence = [
             *state.retrieved_evidence,
@@ -728,7 +740,7 @@ class WorkflowGraph:
         self._trace(
             state,
             node_name="repair",
-            model_used=self._model_name(repair_node.model),
+            model_used=self._model_name(getattr(repair_node, "model", None)),
             tools_used=["RepairNode"],
             relevant_output_ids=[
                 "repaired_answer"
