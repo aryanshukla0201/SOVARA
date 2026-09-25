@@ -32,6 +32,24 @@ class SynthesisNode:
 
         grounded_evidence = []
 
+        # Preserve document/retrieval evidence with its original evidence_id.
+        for item in evidence:
+            if not isinstance(item, dict):
+                continue
+
+            evidence_id = item.get("evidence_id")
+            content = item.get("content")
+
+            if evidence_id and content:
+                grounded_evidence.append({
+                    **item,
+                    "evidence_id": evidence_id,
+                    "content": str(content),
+                    "relevance_score": (
+                        item.get("relevance_score") or 0.0
+                    ),
+                })
+
         for item in code_results:
             if not isinstance(item, dict):
                 continue
