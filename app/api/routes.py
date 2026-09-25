@@ -195,7 +195,7 @@ def run_multimodal_analysis(
     # SAVE UPLOADED FILES
     # ---------------------------------------------------------
 
-    for uploaded_file in files:
+    for uploaded_file in files or []:
         if not uploaded_file.filename:
             continue
 
