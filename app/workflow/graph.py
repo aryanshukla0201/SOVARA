@@ -1,4 +1,6 @@
-from __future__ import annotations
+﻿from __future__ import annotations
+
+from pathlib import Path
 
 from langgraph.graph import END, StateGraph
 
@@ -357,7 +359,7 @@ class WorkflowGraph:
     ) -> WorkflowState:
         result = DocumentFactExtractor.extract(
             query=state.user_query,
-            evidence=state.retrieved_evidence,
+            evidence=evidence,
         )
 
         if result.success:
@@ -386,13 +388,44 @@ class WorkflowGraph:
 
     def _reasoning_route(self, state: WorkflowState) -> WorkflowState:
         self.telemetry.record_tool("ReasoningNode")
+
+        task_state = state.task_state
+
+        if (
+            task_state
+            and "project_context" in task_state.required_capabilities
+        ):
+            readme_path = Path("README.md")
+
+            if readme_path.exists():
+                content = readme_path.read_text(
+                    encoding="utf-8",
+                ).strip()
+
+                if content and not any(
+                    item.get("evidence_id") == "project_sovara_readme"
+                    for item in state.retrieved_evidence
+                    if isinstance(item, dict)
+                ):
+                    state.retrieved_evidence.insert(
+                        0,
+                        {
+                            "evidence_id": "project_sovara_readme",
+                            "evidence_type": "project_context",
+                            "source_filename": "README.md",
+                            "content": content,
+                        },
+                    )
+
+        evidence = state.retrieved_evidence
+
         reasoning_node = ReasoningNode(
             telemetry=self.telemetry,
         )
 
         result = reasoning_node.run(
             user_query=state.user_query,
-            evidence=state.retrieved_evidence,
+            evidence=evidence,
             data_results=state.data_results,
             code_results=state.code_results,
             vision_results=state.vision_results,
@@ -530,7 +563,7 @@ class WorkflowGraph:
         ):
             result = DocumentFactExtractor.extract(
                 query=state.user_query,
-                evidence=state.retrieved_evidence,
+                evidence=evidence,
             )
 
             if result.success:
@@ -949,3 +982,11 @@ class WorkflowGraph:
         self.graph.add_edge("repair", "verifier")
         self.graph.add_edge("deliverable", END)
         return self.graph.compile()
+
+
+
+
+
+
+
+

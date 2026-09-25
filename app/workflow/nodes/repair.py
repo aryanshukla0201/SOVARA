@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 from typing import Any
@@ -78,16 +78,16 @@ class RepairNode:
 
         sorted_evidence = sorted(
             evidence,
-            key=lambda item: item.get("relevance_score", 0),
+            key=lambda item: item.get("relevance_score") or 0,
             reverse=True,
         )
 
         if sorted_evidence:
-            top_score = sorted_evidence[0].get("relevance_score", 0)
+            top_score = sorted_evidence[0].get("relevance_score") or 0
             sorted_evidence = [
                 item
                 for item in sorted_evidence
-                if item.get("relevance_score", 0) >= top_score - 0.10
+                if (item.get("relevance_score") or 0) >= top_score - 0.10
             ]
 
 
@@ -124,8 +124,8 @@ Evidence:
 Requirements:
 - Preserve correct information.
 - Remove unsupported claims.
-- Every factual claim must cite an exact evidence ID.
-- Use citations in the format [evidence_id].
+- Every factual claim must cite the exact supplied evidence ID.
+- Use the exact supplied evidence ID in square brackets, for example [project_sovara_readme].
 - Do not invent evidence IDs.
 - Return only the repaired answer.
 """
@@ -172,3 +172,5 @@ Requirements:
                 "answer": repaired_answer,
             },
         }
+
+

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from app.models.gateway import ModelGateway
 from app.state.task_state import TaskState
@@ -215,6 +215,8 @@ Example:
 
         query_lower = user_query.lower()
 
+        sovara_project_query = "sovara" in query_lower
+
         code_intent_terms = (
             "write code",
             "generate code",
@@ -312,6 +314,9 @@ Example:
 
         if "reasoning" not in capabilities:
             capabilities.append("reasoning")
+
+        if sovara_project_query and "project_context" not in capabilities:
+            capabilities.append("project_context")
 
         # ---------------------------------------------------------
         # REMOVE DUPLICATES
@@ -437,4 +442,6 @@ Example:
         task.task_type = intent
 
         return task
+
+
 
