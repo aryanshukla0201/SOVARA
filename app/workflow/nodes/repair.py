@@ -165,6 +165,12 @@ Requirements:
             flags=re.DOTALL,
         ).strip()
         
+        repaired_answer = re.sub(
+            r"(?im)^Verification failures:\s*\[.*?\]\s*$",
+            "",
+            repaired_answer,
+        ).strip()
+
         return {
             "final_answer": repaired_answer,
             "synthesis_result": {
