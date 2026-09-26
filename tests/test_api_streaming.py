@@ -241,6 +241,7 @@ def test_stream_replays_durable_result_without_rerunning_workflow(tmp_path):
     assert "Recovered answer" in body
     assert f'"run_id": "{task_id}"' in body
     assert f'"event_id": "{task_id}_3"' in body
+    assert f'"task_id": "{task_id}"' in body
 
     sequence_positions = [
         body.index(f'"sequence": {sequence}')

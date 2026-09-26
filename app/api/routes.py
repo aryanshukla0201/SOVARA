@@ -524,6 +524,7 @@ async def analyze_stream(
                             "request_id": durable_result.get(
                                 "request_id"
                             ),
+                            "task_id": task_id,
                             "conversation_id": durable_result.get(
                                 "conversation_id"
                             ),
@@ -696,6 +697,7 @@ async def analyze_stream(
                     "run_id": task_id,
                     "sequence": 3,
                     "request_id": result.get("request_id"),
+                    "task_id": task_id,
                     "conversation_id": result.get("conversation_id"),
                     "status": result.get("status"),
                     "final_answer": result.get("final_answer"),
