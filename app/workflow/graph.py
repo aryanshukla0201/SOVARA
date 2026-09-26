@@ -813,7 +813,7 @@ class WorkflowGraph:
         # ---------------------------------------------------------
         # DOCX REPORT
         # ---------------------------------------------------------
-        if requested_format == "report":
+        if requested_format in {"report", "docx"}:
             output_path = (
                 f"outputs/{state.request_id}_report.docx"
             )
