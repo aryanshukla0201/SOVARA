@@ -704,6 +704,7 @@ async def analyze_stream(
                     ),
                     "stages": result.get("stages", []),
                     "execution_events": result.get("execution_events", []),
+                    "execution_telemetry": result.get("execution_telemetry", {}),
                 },
             )
 
