@@ -367,6 +367,7 @@ def run_multimodal_analysis(
                 "verification_results": response["verification_results"],
                 "stages": response["stages"],
                 "execution_events": response["execution_events"],
+                "execution_telemetry": response["execution_telemetry"],
                 "generated_deliverables": response["generated_deliverables"],
             },
         },
@@ -552,6 +553,10 @@ async def analyze_stream(
                             "execution_events": durable_result.get(
                                 "execution_events",
                                 [],
+                            ),
+                            "execution_telemetry": durable_result.get(
+                                "execution_telemetry",
+                                {},
                             ),
                         },
                     )
