@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from pathlib import Path
 
 from langgraph.graph import END, StateGraph
@@ -654,155 +656,144 @@ class WorkflowGraph:
             *state.vision_results,
         ]
 
-        report = {
-            "title": "Analysis Report",
-            "sections": {
-                "answer": answer,
-                "evidence_count": len(verification_evidence),
-                "document_results": state.document_results,
-                "data_results": state.data_results,
-                "code_results": state.code_results,
-                "vision_results": state.vision_results,
-            },
-        }
-
-        verifier = Verifier()
-
-        verification = verifier.verify(
-            answer,
-            verification_evidence,
-            report,
-        )
-
-        verification_status = verification.get(
-            "verification_status",
-            "passed",
-        )
-
-        state.verification_results = [verification]
-        state.verification_status = verification_status
-
-        state.execution_telemetry = self.telemetry.summary()
-
-
-        self._trace(
+        synthesis_result = state.synthesis_result or {}
+        aggregated_results = getattr(
             state,
-            node_name="verifier",
-            model_used="n/a",
-            tools_used=["Verifier"],
-            relevant_output_ids=[
-                "verification_1",
-                verification_status,
-                *verification.get("failures", []),
-            ],
+            "aggregated_results",
+            {},
+        ) or {}
+
+        analysis_answer = (
+            state.final_answer
+            or synthesis_result.get("answer")
+            or ""
         )
 
-        return state
+        if not isinstance(analysis_answer, str):
+            analysis_answer = str(analysis_answer)
 
-    def _verification_route(self, state: WorkflowState) -> str:
-        if state.verification_status == "passed":
-            return "pass"
+        def extract_section(text: str, title: str) -> str:
+            if not text:
+                return ""
 
-        if (
-            state.verification_status == "failed"
-            and state.repair_attempts < self.max_repair_attempts
-        ):
-            return "fail_retry"
-
-        return "fail_terminal"
-
-    def _repair(self, state: WorkflowState) -> WorkflowState:
-        if state.verification_status == "passed":
-            return state
-
-        state.repair_attempts += 1
-
-        if state.repair_attempts >= self.max_repair_attempts:
-            state.verification_status = "failed_terminal"
-            return state
-
-        verification_failures = []
-
-        if state.verification_results:
-            verification = state.verification_results[0]
-            verification_failures = list(
-                verification.get("failures", [])
+            pattern = re.compile(
+                rf"(?ims)^\s*{re.escape(title)}\s*:\s*$"
+                rf"(.*?)(?=^\s*[A-Za-z][A-Za-z &/_-]*\s*:\s*$|\Z)"
             )
 
-            numeric_validation = verification.get(
-                "numeric_validation",
-                [],
-            )
+            match = pattern.search(text)
 
-            if numeric_validation:
-                verification_failures.append(
-                    f"numeric_validation_details: {numeric_validation}"
-                )
+            if not match:
+                return ""
 
-        verification_evidence = [
-            *state.retrieved_evidence,
-            *state.data_results,
-            *state.code_results,
-            *state.vision_results,
+            return match.group(1).strip()
+
+        def extract_bullets(text: str) -> list[str]:
+            if not text:
+                return []
+
+            return [
+                line.lstrip("-* ").strip()
+                for line in text.splitlines()
+                if line.strip().startswith(("-", "*"))
+                and line.lstrip("-* ").strip()
+            ]
+
+        paragraphs = [
+            paragraph.strip()
+            for paragraph in re.split(r"\n\s*\n", analysis_answer)
+            if paragraph.strip()
         ]
 
-        repair_node = RepairNode(
-            max_attempts=self.max_repair_attempts,
-            telemetry=self.telemetry,
+        executive_summary = (
+            synthesis_result.get("executive_summary")
+            or extract_section(
+                analysis_answer,
+                "Executive Summary",
+            )
+            or (paragraphs[0] if paragraphs else analysis_answer)
         )
 
-        repaired = repair_node.repair(
-            {
-                "final_answer": state.final_answer,
-                "synthesis_result": state.synthesis_result,
-            },
-            verification_failures,
-            verification_evidence,
+        key_findings = (
+            synthesis_result.get("key_findings")
+            or synthesis_result.get("findings")
+            or aggregated_results.get("findings")
+            or extract_section(
+                analysis_answer,
+                "Key Findings",
+            )
+            or extract_bullets(analysis_answer)
         )
 
-        state.final_answer = repaired.get(
-            "final_answer",
-            state.final_answer,
+        detailed_analysis = (
+            synthesis_result.get("detailed_analysis")
+            or extract_section(
+                analysis_answer,
+                "Detailed Analysis",
+            )
+            or analysis_answer
         )
 
-        state.synthesis_result = repaired.get(
-            "synthesis_result",
-            state.synthesis_result,
+        conclusion = (
+            synthesis_result.get("conclusion")
+            or extract_section(
+                analysis_answer,
+                "Conclusion",
+            )
+            or (paragraphs[-1] if paragraphs else analysis_answer)
         )
 
-        self._trace(
-            state,
-            node_name="repair",
-            model_used=self._model_name(getattr(repair_node, "model", None)),
-            tools_used=["RepairNode"],
-            relevant_output_ids=[
-                "repaired_answer"
-            ],
-        )
+        supporting_evidence = []
 
-        return state
+        for item in state.retrieved_evidence:
+            if not isinstance(item, dict):
+                continue
 
-    def _deliverable(self, state: WorkflowState) -> WorkflowState:
-
-        state.execution_telemetry = self.telemetry.summary()
+            supporting_evidence.append(
+                {
+                    "evidence_id": item.get("evidence_id"),
+                    "source_filename": item.get("source_filename"),
+                    "page_number": item.get("page_number"),
+                    "chunk_id": item.get("chunk_id"),
+                    "citation_id": item.get("citation_id"),
+                    "content": item.get(
+                        "content",
+                        item.get("text", ""),
+                    ),
+                }
+            )
 
         report = {
-            "title": "Analysis Report",
+            "title": "SOVARA ANALYSIS REPORT",
             "sections": {
-                "answer": state.final_answer or state.synthesis_result.get(
-                    "answer",
-                    ""
+                "executive_summary": executive_summary,
+                "key_findings": key_findings,
+                "detailed_analysis": detailed_analysis,
+                "supporting_evidence": supporting_evidence,
+                "verification": {
+                    "status": state.verification_status,
+                    "results": state.verification_results,
+                },
+                "conclusion": conclusion,
+            },
+            "appendix": {
+                "evidence_registry": {
+                    "retrieved_evidence": state.retrieved_evidence,
+                    "document_results": state.document_results,
+                    "data_results": state.data_results,
+                    "vision_results": state.vision_results,
+                    "code_results": getattr(
+                        state,
+                        "code_results",
+                        [],
+                    ),
+                },
+                "execution_telemetry": (
+                    state.execution_telemetry or {}
                 ),
-                "evidence": [
-                    *state.retrieved_evidence,
-                    *state.data_results,
-                    *state.vision_results,
-                ],
-                "documents": state.document_results,
-                "data": state.data_results,
-                "vision": state.vision_results,
-                "verification": state.verification_results,
-                "verification_status": state.verification_status,
+                "generated_artifacts": list(
+                    state.generated_deliverables or []
+                ),
             },
         }
 
@@ -898,6 +889,338 @@ class WorkflowGraph:
 
         return state
 
+    def _deliverable(self, state: WorkflowState) -> WorkflowState:
+
+        state.execution_telemetry = self.telemetry.summary()
+
+        synthesis_result = (
+            state.synthesis_result
+            if isinstance(state.synthesis_result, dict)
+            else {}
+        )
+
+        aggregated_results = getattr(
+            state,
+            "aggregated_results",
+            {},
+        ) or {}
+
+        analysis_answer = (
+            state.final_answer
+            or synthesis_result.get("answer")
+            or ""
+        )
+
+        if not isinstance(analysis_answer, str):
+            analysis_answer = str(analysis_answer)
+
+        def extract_section(text: str, title: str) -> str:
+            if not text:
+                return ""
+
+            pattern = re.compile(
+                rf"(?ims)^\s*{re.escape(title)}\s*:?\s*$"
+                rf"(.*?)(?=^\s*[A-Za-z][A-Za-z &/_-]*\s*:?\s*$|\Z)"
+            )
+
+            match = pattern.search(text)
+
+            if not match:
+                return ""
+
+            return match.group(1).strip()
+
+        def paragraphs(text: str) -> list[str]:
+            return [
+                part.strip()
+                for part in re.split(
+                    r"\r?\n\s*\r?\n",
+                    text,
+                )
+                if part.strip()
+            ]
+
+        executive_summary = (
+            synthesis_result.get("executive_summary")
+            or extract_section(
+                analysis_answer,
+                "Executive Summary",
+            )
+        )
+
+        if not executive_summary:
+            answer_paragraphs = paragraphs(
+                analysis_answer
+            )
+
+            executive_summary = (
+                answer_paragraphs[0]
+                if answer_paragraphs
+                else analysis_answer
+            )
+
+        key_findings = (
+            synthesis_result.get("key_findings")
+            or synthesis_result.get("findings")
+            or aggregated_results.get("key_findings")
+            or aggregated_results.get("findings")
+        )
+
+        if not key_findings:
+            findings_text = extract_section(
+                analysis_answer,
+                "Key Findings",
+            )
+
+            if findings_text:
+                key_findings = [
+                    (
+                        line.strip()[2:].strip()
+                        if line.strip().startswith(("- ", "* "))
+                        else line.strip()
+                    )
+                    for line in findings_text.splitlines()
+                    if line.strip()
+                ]
+
+        if key_findings is None:
+            key_findings = []
+        elif isinstance(key_findings, str):
+            key_findings = [
+                line.strip()
+                for line in key_findings.splitlines()
+                if line.strip()
+            ]
+        elif not isinstance(key_findings, list):
+            key_findings = [key_findings]
+
+        detailed_analysis = (
+            synthesis_result.get("detailed_analysis")
+            or extract_section(
+                analysis_answer,
+                "Detailed Analysis",
+            )
+            or analysis_answer
+        )
+
+        conclusion = (
+            synthesis_result.get("conclusion")
+            or extract_section(
+                analysis_answer,
+                "Conclusion",
+            )
+        )
+
+        if not conclusion:
+            answer_paragraphs = paragraphs(
+                analysis_answer
+            )
+
+            conclusion = (
+                answer_paragraphs[-1]
+                if answer_paragraphs
+                else analysis_answer
+            )
+
+        supporting_evidence = []
+
+        for item in state.retrieved_evidence:
+            if not isinstance(item, dict):
+                continue
+
+            supporting_evidence.append(
+                {
+                    "evidence_id": item.get(
+                        "evidence_id"
+                    ),
+                    "source_filename": item.get(
+                        "source_filename"
+                    ),
+                    "page_number": item.get(
+                        "page_number"
+                    ),
+                    "chunk_id": item.get(
+                        "chunk_id"
+                    ),
+                    "citation_id": item.get(
+                        "citation_id"
+                    ),
+                    "reference": item.get(
+                        "reference"
+                    ),
+                    "content": item.get(
+                        "content",
+                        item.get(
+                            "text",
+                            item.get(
+                                "reference",
+                                "",
+                            ),
+                        ),
+                    ),
+                }
+            )
+
+        runtime_telemetry = {}
+
+        if (
+            hasattr(self, "telemetry")
+            and self.telemetry
+        ):
+            runtime_telemetry = (
+                self.telemetry.summary()
+                or {}
+            )
+
+        state_telemetry = (
+            state.execution_telemetry
+            or {}
+        )
+
+        execution_telemetry = {
+            **runtime_telemetry,
+            **state_telemetry,
+        }
+
+        report = {
+            "title": "SOVARA ANALYSIS REPORT",
+            "sections": {
+                "executive_summary":
+                    executive_summary,
+                "key_findings":
+                    key_findings,
+                "detailed_analysis":
+                    detailed_analysis,
+                "supporting_evidence":
+                    supporting_evidence,
+                "verification": {
+                    "status":
+                        state.verification_status,
+                    "results":
+                        state.verification_results,
+                },
+                "conclusion":
+                    conclusion,
+            },
+            "appendix": {
+                "evidence_registry": {
+                    "retrieved_evidence":
+                        state.retrieved_evidence,
+                    "document_results":
+                        state.document_results,
+                    "data_results":
+                        state.data_results,
+                    "vision_results":
+                        state.vision_results,
+                    "code_results": getattr(
+                        state,
+                        "code_results",
+                        [],
+                    ),
+                },
+                "execution_telemetry":
+                    execution_telemetry,
+                "generated_artifacts":
+                    list(
+                        state.generated_deliverables
+                        or []
+                    ),
+            },
+        }
+
+        requested_format = (
+            state.requested_deliverable or ""
+        ).lower().strip()
+
+        # ---------------------------------------------------------
+        # DOCX REPORT
+        # ---------------------------------------------------------
+        if requested_format in {"report", "docx"}:
+            output_path = (
+                f"outputs/{state.request_id}_report.docx"
+            )
+
+            generated_path = DeliverableNode().generate(
+                report,
+                output_path,
+            )
+
+            tool_used = "python-docx"
+
+        # ---------------------------------------------------------
+        # JSON REPORT
+        # ---------------------------------------------------------
+        elif requested_format == "json":
+            import json
+
+            output_path = (
+                f"outputs/{state.request_id}_report.json"
+            )
+
+            with open(
+                output_path,
+                "w",
+                encoding="utf-8",
+            ) as file:
+                json.dump(
+                    report,
+                    file,
+                    indent=2,
+                    ensure_ascii=False,
+                    default=str,
+                )
+
+            generated_path = output_path
+            tool_used = "json"
+
+        # ---------------------------------------------------------
+        # NO DELIVERABLE REQUESTED
+        # ---------------------------------------------------------
+
+        elif not requested_format:
+            state.generated_deliverables = []
+
+            self._trace(
+                state,
+                node_name="deliverable",
+                model_used="n/a",
+                tools_used=[],
+                relevant_output_ids=[],
+            )
+
+            return state
+
+        # ---------------------------------------------------------
+        # UNSUPPORTED FORMAT
+        # ---------------------------------------------------------
+        else:
+            state.generated_deliverables = []
+
+            self._trace(
+                state,
+                node_name="deliverable",
+                model_used="n/a",
+                tools_used=[],
+                relevant_output_ids=[],
+            )
+
+            return state
+
+        state.generated_deliverables = [generated_path]
+
+        self._trace(
+            state,
+            node_name="deliverable",
+            model_used="n/a",
+            tools_used=[tool_used],
+            relevant_output_ids=[
+                generated_path
+            ],
+        )
+
+        return state
+
+
     def build(self):
         self.graph.add_node("input_processor", self._input_processor)
         self.graph.add_node("task_analyzer", self._task_analyzer)
@@ -982,11 +1305,3 @@ class WorkflowGraph:
         self.graph.add_edge("repair", "verifier")
         self.graph.add_edge("deliverable", END)
         return self.graph.compile()
-
-
-
-
-
-
-
-
