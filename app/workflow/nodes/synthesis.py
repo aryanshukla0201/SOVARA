@@ -171,6 +171,18 @@ RULES:
 
 1. Answer ONLY using the authoritative evidence above.
 
+1a. Inspect the full structure of each authoritative evidence item, including
+nested objects such as records, analyses, metadata, and field/value mappings.
+
+1b. Do not state that a value, date, field, or fact is missing when it exists
+anywhere inside the supplied authoritative evidence.
+
+1c. A claim that evidence does not establish something is allowed only after
+checking the complete supplied evidence, including nested fields.
+
+1d. When the evidence contains an exact value or date relevant to the user's
+question, report that value directly and preserve it exactly.
+
 2. Use the authoritative evidence to support factual claims.
 
 3. Evidence IDs are provenance identifiers supplied in the

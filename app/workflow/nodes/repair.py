@@ -124,6 +124,9 @@ Evidence:
 Requirements:
 - Preserve correct information.
 - Remove unsupported claims.
+- Treat numeric validation `expected` values as authoritative corrections.
+- When numeric validation identifies an expected value, use that value to correct the answer.
+- Do not claim a numeric result cannot be calculated when the supplied evidence contains that result.
 - Every factual claim must cite the exact supplied evidence ID.
 - Use the exact supplied evidence ID in square brackets, for example [project_sovara_readme].
 - Do not invent evidence IDs.
