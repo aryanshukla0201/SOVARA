@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    border-color: #232328;
+  }
+  
+  body {
+    background-color: #0b0b0e;
+    color: #e2e2e8;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Custom sleek scrollbar matching Sovara AI design */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a2a32;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3e3e4a;
+  }
+}
+
+.font-serif-brand {
+  font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+}
+
+/* Metallic gradient effect for hero watermark */
+.metallic-text {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(180, 190, 205, 0.28) 45%,
+    rgba(80, 90, 105, 0.12) 80%,
+    rgba(40, 45, 55, 0.05) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom glow effects */
+.teal-glow {
+  box-shadow: 0 0 25px -4px rgba(122, 223, 212, 0.25);
+}
+
+.teal-border-glow:focus-within {
+  border-color: rgba(122, 223, 212, 0.45);
+  box-shadow: 0 0 20px -3px rgba(122, 223, 212, 0.15);
+}
