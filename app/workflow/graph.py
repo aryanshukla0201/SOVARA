@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 
@@ -279,13 +279,29 @@ class WorkflowGraph:
             if file_record.file_type != "image":
                 continue
 
+            if self.telemetry is not None:
+                self.telemetry.record_file()
+                self.telemetry.record_tool("VisionAnalyzer")
             vision_node = VisionNode(
                 telemetry=self.telemetry
             )
+
             result = vision_node.run(
                 file_record.storage_path,
                 state.user_query
             )
+
+            vision_model = (
+                result.get("model")
+                if isinstance(result, dict)
+                else None
+            )
+
+            if vision_model and self.telemetry is not None:
+                self.telemetry.record_llm_call(
+                    vision_model,
+                    local=True,
+                )
 
             # Keep the complete vision result for multimodal reasoning
             state.vision_results.append({
@@ -311,7 +327,10 @@ class WorkflowGraph:
             self._trace(
                 state,
                 node_name="vision_route",
-                model_used=self._model_name(vision_node.analyzer),
+                model_used=(
+                    vision_model
+                    or self._model_name(vision_node.analyzer)
+                ),
                 tools_used=["VisionAnalyzer"],
                 relevant_output_ids=[
                     f"{file_record.file_id}_ev_{index:03d}"
@@ -320,7 +339,6 @@ class WorkflowGraph:
             )
 
         return state
-
     def _code_execution(self, state: WorkflowState) -> WorkflowState:
         self.telemetry.record_tool("CodePipeline")
 
@@ -766,6 +784,12 @@ class WorkflowGraph:
         report = {
             "title": "SOVARA ANALYSIS REPORT",
             "sections": {
+                "answer": answer,
+                "evidence_count": len(verification_evidence),
+                "document_results": state.document_results,
+                "data_results": state.data_results,
+                "vision_results": state.vision_results,
+
                 "executive_summary": executive_summary,
                 "key_findings": key_findings,
                 "detailed_analysis": detailed_analysis,
@@ -797,93 +821,116 @@ class WorkflowGraph:
             },
         }
 
-        requested_format = (
-            state.requested_deliverable or ""
-        ).lower().strip()
+        verifier = Verifier()
 
-        # ---------------------------------------------------------
-        # DOCX REPORT
-        # ---------------------------------------------------------
-        if requested_format in {"report", "docx"}:
-            output_path = (
-                f"outputs/{state.request_id}_report.docx"
-            )
+        verification = verifier.verify(
+            answer,
+            verification_evidence,
+            report,
+        )
 
-            generated_path = DeliverableNode().generate(
-                report,
-                output_path,
-            )
+        verification_status = verification.get(
+            "verification_status",
+            "passed",
+        )
 
-            tool_used = "python-docx"
+        state.verification_results = [verification]
+        state.verification_status = verification_status
 
-        # ---------------------------------------------------------
-        # JSON REPORT
-        # ---------------------------------------------------------
-        elif requested_format == "json":
-            import json
-
-            output_path = (
-                f"outputs/{state.request_id}_report.json"
-            )
-
-            with open(
-                output_path,
-                "w",
-                encoding="utf-8",
-            ) as file:
-                json.dump(
-                    report,
-                    file,
-                    indent=2,
-                    ensure_ascii=False,
-                    default=str,
-                )
-
-            generated_path = output_path
-            tool_used = "json"
-
-        # ---------------------------------------------------------
-        # NO DELIVERABLE REQUESTED
-        # ---------------------------------------------------------
-
-        elif not requested_format:
-            state.generated_deliverables = []
-
-            self._trace(
-                state,
-                node_name="deliverable",
-                model_used="n/a",
-                tools_used=[],
-                relevant_output_ids=[],
-            )
-
-            return state
-
-        # ---------------------------------------------------------
-        # UNSUPPORTED FORMAT
-        # ---------------------------------------------------------
-        else:
-            state.generated_deliverables = []
-
-            self._trace(
-                state,
-                node_name="deliverable",
-                model_used="n/a",
-                tools_used=[],
-                relevant_output_ids=[],
-            )
-
-            return state
-
-        state.generated_deliverables = [generated_path]
+        state.execution_telemetry = self.telemetry.summary()
 
         self._trace(
             state,
-            node_name="deliverable",
+            node_name="verifier",
             model_used="n/a",
-            tools_used=[tool_used],
+            tools_used=["Verifier"],
             relevant_output_ids=[
-                generated_path
+                "verification_1",
+                verification_status,
+                *verification.get("failures", []),
+            ],
+        )
+
+        return state
+
+    def _verification_route(self, state: WorkflowState) -> str:
+        if state.verification_status == "passed":
+            return "pass"
+
+        if (
+            state.verification_status == "failed"
+            and state.repair_attempts < self.max_repair_attempts
+        ):
+            return "fail_retry"
+
+        return "fail_terminal"
+
+    def _repair(self, state: WorkflowState) -> WorkflowState:
+        if state.verification_status == "passed":
+            return state
+
+        state.repair_attempts += 1
+
+        if state.repair_attempts >= self.max_repair_attempts:
+            state.verification_status = "failed_terminal"
+            return state
+
+        verification_failures = []
+
+        if state.verification_results:
+            verification = state.verification_results[0]
+            verification_failures = list(
+                verification.get("failures", [])
+            )
+
+            numeric_validation = verification.get(
+                "numeric_validation",
+                [],
+            )
+
+            if numeric_validation:
+                verification_failures.append(
+                    f"numeric_validation_details: {numeric_validation}"
+                )
+
+        verification_evidence = [
+            *state.retrieved_evidence,
+            *state.data_results,
+            *state.code_results,
+            *state.vision_results,
+        ]
+
+        repair_node = RepairNode(
+            max_attempts=self.max_repair_attempts,
+            telemetry=self.telemetry,
+        )
+
+        repaired = repair_node.repair(
+            {
+                "final_answer": state.final_answer,
+                "synthesis_result": state.synthesis_result,
+            },
+            verification_failures,
+            verification_evidence,
+        )
+
+        state.final_answer = repaired.get(
+            "final_answer",
+            state.final_answer,
+        )
+
+        state.synthesis_result = repaired.get(
+            "synthesis_result",
+            state.synthesis_result,
+        )
+
+        self._trace(
+            state,
+            node_name="repair",
+            model_used=self._model_name(getattr(repair_node, "model", None)),
+            tools_used=["RepairNode"],
+            relevant_output_ids=[
+                "repaired_answer"
             ],
         )
 
