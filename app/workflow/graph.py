@@ -526,6 +526,7 @@ class WorkflowGraph:
         if (
             task_state
             and "project_context" in task_state.required_capabilities
+            and not state.uploaded_files
         ):
             readme_path = Path("README.md")
 
@@ -1464,4 +1465,3 @@ class WorkflowGraph:
         self.graph.add_edge("repair", "verifier")
         self.graph.add_edge("deliverable", END)
         return self.graph.compile()
-
