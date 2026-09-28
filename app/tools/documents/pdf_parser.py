@@ -68,7 +68,19 @@ class PDFParser:
 
     @classmethod
     def extract_text(cls, path: str) -> dict[str, Any]:
-        doc = fitz.open(path)
+        try:
+            doc = fitz.open(path)
+        except Exception as exc:
+            logger.warning(
+                "[PDF WARNING] Unable to open PDF %s: %s",
+                path,
+                exc,
+            )
+            return {
+                "pages": [],
+                "metadata": {},
+                "error": str(exc),
+            }
 
         pages: list[dict[str, Any]] = []
 

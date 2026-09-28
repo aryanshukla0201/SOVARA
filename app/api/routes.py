@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import asdict
 from app.state.execution_trace_projection import project_execution_trace
@@ -238,11 +238,17 @@ def run_multimodal_analysis(
         requested_deliverable=requested_deliverable,
     )
 
-    state.uploaded_files = prepare_uploaded_files(
-        user_query,
-        saved_paths,
-        base_dir=str(upload_dir),
-    )
+    try:
+        state.uploaded_files = prepare_uploaded_files(
+            user_query,
+            saved_paths,
+            base_dir=str(upload_dir),
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
 
     # ---------------------------------------------------------
     # RUN ACTUAL SOVARA LANGGRAPH WORKFLOW
@@ -941,3 +947,4 @@ async def search_vault(
             for item in results
         ],
     }
+

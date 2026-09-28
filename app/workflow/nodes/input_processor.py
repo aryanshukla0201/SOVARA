@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import hashlib
 from pathlib import Path
@@ -64,6 +64,20 @@ def prepare_uploaded_files(
 ) -> list[UploadedFileRecord]:
     prepared: list[UploadedFileRecord] = []
 
+    supported_file_types = {
+        "pdf",
+        "png",
+        "jpg",
+        "jpeg",
+        "bmp",
+        "gif",
+        "webp",
+        "csv",
+        "docx",
+        "xlsx",
+        "xls",
+    }
+
     for file in files:
         path = Path(file)
 
@@ -72,6 +86,11 @@ def prepare_uploaded_files(
             .lower()
             .lstrip(".")
         )
+
+        if suffix not in supported_file_types:
+            raise ValueError(
+                f"Unsupported file type: '.{suffix}'"
+            )
 
         file_type = (
             "pdf"

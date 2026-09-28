@@ -67,6 +67,29 @@ class CSVAnalyzer:
             ):
                 metric = column
                 break
+        else:
+            if re.search(r"\b(sum|total)\b", query):
+                measure_keywords = (
+                    "amount",
+                    "value",
+                    "price",
+                    "cost",
+                    "total",
+                    "revenue",
+                    "sales",
+                    "quantity",
+                    "count",
+                )
+
+                for column in numeric_columns:
+                    column_name = str(column).lower()
+
+                    if any(
+                        keyword in column_name
+                        for keyword in measure_keywords
+                    ):
+                        metric = column
+                        break
 
         values = (
             pd.to_numeric(df[metric], errors="coerce")

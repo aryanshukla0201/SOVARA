@@ -286,10 +286,122 @@ class WorkflowGraph:
                 telemetry=self.telemetry
             )
 
-            result = vision_node.run(
-                file_record.storage_path,
-                state.user_query
-            )
+            try:
+
+
+                result = vision_node.run(
+
+
+                    file_record.storage_path,
+
+
+                    state.user_query
+
+
+                )
+
+
+            except Exception as exc:
+
+
+                error_message = (
+
+
+                    f"Unable to analyze image "
+
+
+                    f"'{file_record.original_name}': {exc}"
+
+
+                )
+
+
+
+                state.vision_results.append({
+
+
+                    "source_file": file_record.original_name,
+
+
+                    "file_id": file_record.file_id,
+
+
+                    "result": {
+
+
+                        "error": error_message,
+
+
+                    },
+
+
+                })
+
+
+
+                state.retrieved_evidence.append({
+
+
+                    "evidence_id": f"{file_record.file_id}_error",
+
+
+                    "source_file_id": file_record.file_id,
+
+
+                    "source_filename": file_record.original_name,
+
+
+                    "evidence_type": "vision",
+
+
+                    "content": error_message,
+
+
+                    "confidence": 1.0,
+
+
+                    "retrieval_method": "vision_error",
+
+
+                })
+
+
+
+                self._trace(
+
+
+                    state,
+
+
+                    node_name="vision_route",
+
+
+                    model_used=self._model_name(
+
+
+                        getattr(vision_node.analyzer, "analyzer", None)
+
+
+                    ),
+
+
+                    tools_used=["VisionAnalyzer"],
+
+
+                    relevant_output_ids=[
+
+
+                        f"{file_record.file_id}_error"
+
+
+                    ],
+
+
+                )
+
+
+
+                continue
 
             vision_model = (
                 result.get("model")
@@ -1352,3 +1464,4 @@ class WorkflowGraph:
         self.graph.add_edge("repair", "verifier")
         self.graph.add_edge("deliverable", END)
         return self.graph.compile()
+

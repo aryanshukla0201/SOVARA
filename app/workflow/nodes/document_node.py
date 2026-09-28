@@ -5,6 +5,7 @@ from pathlib import Path
 from app.tools.documents.pdf_parser import PDFParser
 from app.tools.documents.docx_parser import DOCXParser
 from app.tools.documents.retriever import DocumentRetriever
+from app.state.evidence import EvidenceRecord
 
 
 class DocumentNode:
@@ -26,6 +27,23 @@ class DocumentNode:
         # ---------------------------------------------------------
         if file_type == "pdf":
             parsed_document = PDFParser.extract_text(file_path)
+
+            if parsed_document.get("error"):
+                return [
+                    EvidenceRecord(
+                        evidence_id=f"{file_id}_error",
+                        source_file_id=file_id,
+                        source_filename=filename,
+                        page_number=None,
+                        chunk_id="document_error",
+                        text=(
+                            f"Unable to parse PDF '{filename}': "
+                            f"{parsed_document['error']}"
+                        ),
+                        relevance_score=1.0,
+                        retrieval_method="parser_error",
+                    )
+                ]
 
             chunks = []
 

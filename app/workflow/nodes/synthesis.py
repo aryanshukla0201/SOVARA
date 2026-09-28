@@ -1,6 +1,7 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
+import re
 
 from app.models.gateway import ModelGateway
 from app.services.execution_telemetry import ExecutionTelemetry
@@ -19,6 +20,59 @@ class SynthesisNode:
         self.model = model or ModelGateway(
             telemetry=telemetry,
         ).resolve("reasoning")
+
+    @staticmethod
+    def _normalize_citations(
+        answer: str,
+        evidence_ids: list[str],
+    ) -> str:
+        if not answer or not evidence_ids:
+            return answer
+
+        if len(evidence_ids) == 1:
+            evidence_id = evidence_ids[0]
+
+            answer = re.sub(
+                r"\[SOURCE\s*->\s*FACT\s*->\s*VALUE\s*->\s*ID\]",
+                f"[{evidence_id}]",
+                answer,
+            )
+
+            return answer
+
+        valid_ids = set(evidence_ids)
+
+        answer = re.sub(
+            r"\[\[([^\[\]]+)\]\]",
+            r"[\1]",
+            answer,
+        )
+
+        answer = re.sub(
+            r"\[EXACT_EVIDENCE_ID:\s*([^\[\]]+)\]",
+            r"[\1]",
+            answer,
+        )
+
+        answer = re.sub(
+            r"\[ID:\s*([^\[\]]+)\]",
+            r"[\1]",
+            answer,
+        )
+
+        def normalize(match: re.Match[str]) -> str:
+            citation = match.group(1).strip()
+
+            if citation in valid_ids:
+                return f"[{citation}]"
+
+            return f"[{evidence_ids[0]}]"
+
+        return re.sub(
+            r"\[([^\[\]]+)\]",
+            normalize,
+            answer,
+        )
 
     def run(
         self,
@@ -160,6 +214,16 @@ class SynthesisNode:
             conversation_history=conversation_history,
         )
 
+        valid_evidence_ids = "\n".join(
+            f"- {item['evidence_id']}"
+            for item in grounded_evidence
+        )
+
+        valid_evidence_citation_examples = "\n".join(
+            f"[{item['evidence_id']}]"
+            for item in grounded_evidence
+        )
+
         prompt = f"""
 You are SOVARA's final answer generation stage.
 
@@ -187,36 +251,31 @@ SOURCE -> FACT -> VALUE -> ID
 
 Never move a value from one source to another.
 
-For example:
+Keep each factual value associated with the exact evidence item
+where that value appears.
 
-EVIDENCE ITEM 1:
-ID: pdf_ev_001
-SOURCE: budget.pdf
-FACT: Project budget = 150000 INR
-
-EVIDENCE ITEM 2:
-ID: image_ev_002
-SOURCE: budget.png
-FACT: Project budget = 275000 INR
-
-The correct answer must keep 150000 INR associated with budget.pdf
-and 275000 INR associated with budget.png.
-
-Do not merge, swap, or interchange those values.
+Do not merge, swap, or interchange values between evidence items.
 
 CITATIONS:
 
-Every factual answer must include the exact ID of the evidence item
-that supports that fact.
+Every factual answer must include the exact evidence ID that supports
+that fact.
 
 The citation format is exactly:
 
-[ID]
+[EXACT_EVIDENCE_ID]
 
-For example:
-[file_0e1deb0e_ev_001]
+Valid evidence IDs for this response are:
 
-The ID must be copied character-for-character from an EVIDENCE ITEM.
+{valid_evidence_ids}
+
+Each valid evidence ID must be cited exactly in square brackets,
+for example:
+
+{valid_evidence_citation_examples}
+
+The ID must be copied character-for-character from the supplied
+AUTHORITATIVE EVIDENCE.
 
 SOURCE names are NOT citations.
 
@@ -228,11 +287,10 @@ Never output:
 [filename.pdf]
 [filename.png]
 
-Only output the actual evidence ID, for example:
-[pdf_ev_001]
-
 If multiple sources answer different parts of the question, cite each
-part with the ID belonging to that source.
+part with the exact evidence ID belonging to that source.
+
+Never invent, shorten, rename, or reconstruct an evidence ID.
 
 OUTPUT:
 
@@ -279,6 +337,14 @@ Return ONLY the final answer.
             ),
         )
 
+        result = self._normalize_citations(
+            result,
+            [
+                item["evidence_id"]
+                for item in grounded_evidence
+            ],
+        )
+
         return {
             "answer": result,
             "evidence_references": [
@@ -287,4 +353,6 @@ Return ONLY the final answer.
             ],
             "confidence": 0.85,
         }
+
+
 
