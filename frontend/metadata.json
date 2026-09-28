@@ -1,0 +1,7 @@
+{
+  "name": "Sovara AI",
+  "description": "Private workspace and local execution AI assistant with Knowledge Vault, Artifacts, and Deep Research.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
