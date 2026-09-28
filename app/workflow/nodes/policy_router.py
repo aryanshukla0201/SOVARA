@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from app.state.workflow_state import WorkflowState
 
@@ -15,19 +15,35 @@ class PolicyRouter:
 
         capabilities = set(task.required_capabilities)
 
+        file_types = {
+            file.file_type
+            for file in state.uploaded_files
+        }
+
+        has_document_files = bool(
+            file_types & {"pdf", "docx"}
+        )
+        has_data_files = bool(
+            file_types & {"csv", "xlsx", "xls"}
+        )
+        has_image_files = "image" in file_types
+
         if task.requires_rag or "document_analysis" in capabilities:
-            if state.uploaded_files:
+            if has_document_files:
                 routes.append("document")
-            else:
+            elif not state.uploaded_files:
                 routes.append("vault")
 
-        if "data_analysis" in capabilities:
+        if "data_analysis" in capabilities and has_data_files:
             routes.append("data")
 
         if task.requires_code:
             routes.append("code_execution")
 
-        if task.requires_vision or "vision_analysis" in capabilities:
+        if (
+            task.requires_vision
+            or "vision_analysis" in capabilities
+        ) and has_image_files:
             routes.append("vision")
 
         if "reasoning" in capabilities:
