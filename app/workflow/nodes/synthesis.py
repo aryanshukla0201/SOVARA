@@ -45,6 +45,10 @@ class SynthesisNode:
                     **item,
                     "evidence_id": evidence_id,
                     "content": str(content),
+                    "source_filename": item.get(
+                        "source_filename",
+                        item.get("source_file", "unknown"),
+                    ),
                     "relevance_score": (
                         item.get("relevance_score") or 0.0
                     ),
@@ -136,113 +140,126 @@ class SynthesisNode:
             reverse=True,
         )
 
-        evidence_context = "\n".join(
-            f"[{item['evidence_id']}] {item['content']}"
-            for item in grounded_evidence
+        evidence_context = "\n\n".join(
+            (
+                f"EVIDENCE ITEM {index}:\\n"
+                f"ID: {item['evidence_id']}\\n"
+                f"SOURCE: {item.get('source_filename', 'unknown')}\\n"
+                f"TYPE: {item.get('evidence_type', 'unknown')}\\n"
+                f"FACT: {item['content']}"
+            )
+            for index, item in enumerate(grounded_evidence, start=1)
             if item.get("content")
         )
 
         conversation_context = self.context_manager.build_prompt_from_blocks(
             user_query=user_query,
             context_blocks=[
-                f"AUTHORITATIVE EVIDENCE:\n{evidence_context}"
+                f"AUTHORITATIVE EVIDENCE:\\n{evidence_context}"
             ],
             conversation_history=conversation_history,
         )
 
         prompt = f"""
-You are the final answer generation stage of SOVARA.
+You are SOVARA's final answer generation stage.
 
-CONVERSATION CONTEXT:
-{conversation_context}
+USER QUESTION:
+{user_query}
 
-RETRIEVAL PRIORITY:
+AUTHORITATIVE EVIDENCE:
+{evidence_context}
 
-- Evidence is ordered from highest relevance to lowest relevance.
-- Prefer the highest-relevance evidence when answering.
-- Use lower-ranked evidence only when it directly contributes to the answer.
-- Do NOT let unrelated lower-ranked evidence override highly relevant evidence.
-- If one evidence item directly answers the user's question, answer from that
-  evidence rather than combining it with unrelated documents.
-- Evidence from different documents must not be combined unless the documents
-  are actually relevant to the same question.
+Answer the user's question using ONLY the authoritative evidence.
 
-RULES:
+IMPORTANT SOURCE MAPPING:
 
-1. Answer ONLY using the authoritative evidence above.
+Each EVIDENCE ITEM is an independent source.
 
-1a. Inspect the full structure of each authoritative evidence item, including
+Inspect the full structure of each authoritative evidence item, including
 nested objects such as records, analyses, metadata, and field/value mappings.
 
-1b. Do not state that a value, date, field, or fact is missing when it exists
+Do not state that a value, date, field, or fact is missing when it exists
 anywhere inside the supplied authoritative evidence.
 
-1c. A claim that evidence does not establish something is allowed only after
-checking the complete supplied evidence, including nested fields.
+For every factual value, keep this exact relationship:
 
-1d. When the evidence contains an exact value or date relevant to the user's
-question, report that value directly and preserve it exactly.
+SOURCE -> FACT -> VALUE -> ID
 
-2. Use the authoritative evidence to support factual claims.
+Never move a value from one source to another.
 
-3. Evidence IDs are provenance identifiers supplied in the
-AUTHORITATIVE EVIDENCE section and may be used only as citation markers.
+For example:
 
-4. Every factual paragraph MUST contain at least one citation.
+EVIDENCE ITEM 1:
+ID: pdf_ev_001
+SOURCE: budget.pdf
+FACT: Project budget = 150000 INR
 
-5. The ONLY valid citation format is:
-   [EXACT_EVIDENCE_ID]
+EVIDENCE ITEM 2:
+ID: image_ev_002
+SOURCE: budget.png
+FACT: Project budget = 275000 INR
 
-   Replace EXACT_EVIDENCE_ID with the exact evidence_id supplied
-   in the AUTHORITATIVE EVIDENCE section.
+The correct answer must keep 150000 INR associated with budget.pdf
+and 275000 INR associated with budget.png.
 
-6. Copy evidence IDs character-for-character inside square brackets.
+Do not merge, swap, or interchange those values.
 
-7. NEVER invent, modify, abbreviate, or substitute an evidence ID.
+CITATIONS:
 
-8. NEVER use citation formats such as:
-   [EVIDENCE_ID: data_test_ev_001]
-   [evidence_id]
-   [citation: data_test_ev_001]
-   [source]
+Every factual answer must include the exact ID of the evidence item
+that supports that fact.
 
-9. Internal IDs such as request IDs and execution IDs must never be
-included unless they are being used as an exact supplied evidence_id
-citation.
+The citation format is exactly:
 
-7. NEVER use citation placeholders such as [evidence_id], [citation],
-[source], or [code_12345678].
+[ID]
 
-8. Preserve exact numerical values from the authoritative evidence.
+For example:
+[file_0e1deb0e_ev_001]
 
-9. Do NOT output JSON.
+The ID must be copied character-for-character from an EVIDENCE ITEM.
 
-10 . Do NOT output Python dictionaries.
+SOURCE names are NOT citations.
 
-11. Do NOT output internal execution state.
+Never put a filename inside square brackets.
 
-12. Do NOT output evidence lists.
+Never output:
+[CITATION ID: ...]
+[SOURCE: ...]
+[filename.pdf]
+[filename.png]
 
-13. Do NOT explain the verification process.
+Only output the actual evidence ID, for example:
+[pdf_ev_001]
 
-14 . Return ONLY a clean human-readable final answer.
+If multiple sources answer different parts of the question, cite each
+part with the ID belonging to that source.
 
-15. If the evidence cannot establish a claim, explicitly state that
-the evidence does not establish it.
+OUTPUT:
 
-16. Preserve exact numerical values from evidence.
+Return ONLY the human-readable answer to the user's question.
 
-17. When a highly relevant evidence item directly answers the question,
-do not substitute information from a lower-relevance unrelated item.
+Do not output:
+- evidence lists
+- EVIDENCE ITEM labels
+- ID: labels
+- SOURCE: labels
+- internal execution state
+- verification failures
+- verification details
+- JSON
+- Python dictionaries
+- reasoning about the verification process
 
-19. When a highly relevant evidence item directly answers the question,
-do not substitute information from a lower-relevance unrelated item.
+Preserve exact numerical values from the evidence.
 
-20. If the top-ranked evidence clearly answers the question, prioritize it
-over all unrelated lower-ranked evidence.
+If the question asks for multiple sources, answer each requested source
+separately and keep every value associated with its original source.
 
-Before returning the answer, internally verify that every citation
-exactly matches one of the supplied evidence_id values.
+Before returning the answer, internally check:
+1. Every factual value comes from the correct evidence item.
+2. Every citation is an exact supplied evidence ID.
+3. No source filename is used as a citation.
+4. No evidence item is associated with another item's value.
 
 Return ONLY the final answer.
 """
