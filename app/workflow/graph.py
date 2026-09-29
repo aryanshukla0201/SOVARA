@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import re
 
@@ -150,10 +150,10 @@ class WorkflowGraph:
             top_k=5,
         )
 
-        state.retrieved_evidence = [
+        state.retrieved_evidence.extend(
             item.model_dump() if hasattr(item, "model_dump") else item
             for item in evidence
-        ]
+        )
         self.telemetry.record_tool("KnowledgeVault")
         return state
 

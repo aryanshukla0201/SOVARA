@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from app.state.workflow_state import WorkflowState
 
@@ -28,11 +28,24 @@ class PolicyRouter:
         )
         has_image_files = "image" in file_types
 
+        knowledge_intents = {
+            "knowledge_question",
+            "document_question",
+            "knowledge_lookup",
+        }
+
+        knowledge_vault_query = (
+            "knowledge vault" in state.user_query.lower()
+        )
+
         if task.requires_rag or "document_analysis" in capabilities:
             if has_document_files:
                 routes.append("document")
             elif not state.uploaded_files:
                 routes.append("vault")
+
+        if task.intent in knowledge_intents or knowledge_vault_query:
+            routes.append("vault")
 
         if "data_analysis" in capabilities and has_data_files:
             routes.append("data")
