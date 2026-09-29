@@ -81,6 +81,11 @@ def prepare_uploaded_files(
     for file in files:
         path = Path(file)
 
+        if not path.exists():
+            raise ValueError(
+                f"File not found: '{path.name}'"
+            )
+
         suffix = (
             path.suffix
             .lower()
@@ -119,10 +124,14 @@ def prepare_uploaded_files(
             exist_ok=True,
         )
 
-        if path.exists():
-            destination_path.write_bytes(
-                path.read_bytes()
+        if not path.exists():
+            raise ValueError(
+                f"File not found: '{path.name}'"
             )
+
+        destination_path.write_bytes(
+            path.read_bytes()
+        )
 
         prepared.append(
             UploadedFileRecord(
