@@ -161,6 +161,24 @@ Requirements:
             flags=re.DOTALL,
         ).strip()
 
+        valid_ids = set(evidence_ids)
+
+        repaired_answer = re.sub(
+            r"\[([^\[\]]+)\]",
+            lambda match: (
+                match.group(0)
+                if match.group(1).strip() in valid_ids
+                else ""
+            ),
+            repaired_answer,
+        )
+
+        repaired_answer = re.sub(
+            r"[ \t]+\n",
+            "\n",
+            repaired_answer,
+        ).strip()
+
         repaired_answer = re.sub(
             r"^.*?</think>\s*",
             "",

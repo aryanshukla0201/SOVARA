@@ -1,6 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import hashlib
+import uuid
 from pathlib import Path
 
 from app.core.constants import SUPPORTED_INPUT_TYPES
@@ -54,7 +55,7 @@ def _file_id(path: Path) -> str:
         path.read_bytes()
     ).hexdigest()
 
-    return f"file_{digest[:8]}"
+    return f"file_{digest[:8]}_{uuid.uuid4().hex[:8]}"
 
 
 def prepare_uploaded_files(

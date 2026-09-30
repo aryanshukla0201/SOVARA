@@ -67,6 +67,35 @@ class DocumentFactExtractor:
     }
 
     @classmethod
+    def detect_fields(cls, query: str) -> list[str]:
+        normalized = query.strip().lower()
+        matches: list[str] = []
+
+        for field in cls.FIELD_ORDER:
+            for pattern in cls.FIELD_PATTERNS[field]:
+                if re.search(pattern, normalized):
+                    matches.append(field)
+                    break
+
+        extraction_markers = [
+            "what is",
+            "what's",
+            "give me",
+            "tell me",
+            "provide",
+            "which is",
+            "state",
+            "identify",
+        ]
+
+        if not matches or not any(
+            marker in normalized for marker in extraction_markers
+        ):
+            return []
+
+        return matches
+
+    @classmethod
     def detect_field(cls, query: str) -> str | None:
         """
         Detect whether the user is asking for one or more exact
@@ -203,9 +232,9 @@ class DocumentFactExtractor:
         query: str,
         evidence: list[dict],
     ) -> DocumentFactResult:
-        field = cls.detect_field(query)
+        fields = cls.detect_fields(query)
 
-        if field is None:
+        if not fields:
             return DocumentFactResult(success=False)
 
         # Prefer the highest-relevance evidence first.
@@ -223,12 +252,18 @@ class DocumentFactExtractor:
         )
 
         for item in candidates:
-            value = cls._extract_labeled_value(
-                item["content"],
-                field,
-            )
+            extracted = []
 
-            if value:
+            for field in fields:
+                value = cls._extract_labeled_value(
+                    item["content"],
+                    field,
+                )
+
+                if value:
+                    extracted.append((field, value))
+
+            if extracted:
                 evidence_id = item.get("evidence_id")
 
                 citation = (
@@ -237,23 +272,19 @@ class DocumentFactExtractor:
                     else ""
                 )
 
-                answer = (
-                    f"{cls.FIELD_LABELS[field]}: "
-                    f"{value}{citation}"
+                answer = "\n".join(
+                    f"{cls.FIELD_LABELS[field]}: {value}{citation}"
+                    for field, value in extracted
                 )
 
                 return DocumentFactResult(
                     success=True,
                     answer=answer,
-                    evidence_id=(
-                        str(evidence_id)
-                        if evidence_id
-                        else None
-                    ),
-                    field=field,
+                    evidence_id=evidence_id,
+                    field=extracted[0][0],
                 )
 
         return DocumentFactResult(
             success=False,
-            field=field,
+            field=fields[0],
         )

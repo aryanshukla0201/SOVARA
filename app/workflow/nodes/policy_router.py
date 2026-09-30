@@ -30,12 +30,15 @@ class PolicyRouter:
 
         knowledge_intents = {
             "knowledge_question",
-            "document_question",
             "knowledge_lookup",
         }
 
+        query_lower = state.user_query.lower()
         knowledge_vault_query = (
-            "knowledge vault" in state.user_query.lower()
+            "knowledge vault" in query_lower
+            and "do not use knowledge vault" not in query_lower
+            and "without knowledge vault" not in query_lower
+            and "exclude knowledge vault" not in query_lower
         )
 
         if task.requires_rag or "document_analysis" in capabilities:
@@ -67,3 +70,5 @@ class PolicyRouter:
         deduped = list(dict.fromkeys(routes))
         state.selected_routes = deduped
         return state.selected_routes
+
+

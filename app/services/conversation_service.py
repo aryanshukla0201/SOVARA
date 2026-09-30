@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 import uuid
 from pathlib import Path
@@ -39,7 +40,93 @@ class ConversationService:
                 """
             )
 
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS conversation_files (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    conversation_id TEXT NOT NULL,
+                    file_id TEXT NOT NULL,
+                    original_name TEXT NOT NULL,
+                    storage_path TEXT NOT NULL,
+                    file_type TEXT NOT NULL,
+                    metadata TEXT NOT NULL DEFAULT '{}',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (conversation_id)
+                    REFERENCES conversations(conversation_id)
+                )
+                """
+            )
+
             conn.commit()
+
+    def add_file(
+        self,
+        conversation_id: str,
+        file_record,
+    ) -> None:
+        if not self.exists(conversation_id):
+            raise ValueError(
+                f"Conversation not found: {conversation_id}"
+            )
+
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO conversation_files
+                (
+                    conversation_id,
+                    file_id,
+                    original_name,
+                    storage_path,
+                    file_type,
+                    metadata
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    conversation_id,
+                    file_record.file_id,
+                    file_record.original_name,
+                    file_record.storage_path,
+                    file_record.file_type,
+                    json.dumps(file_record.metadata),
+                ),
+            )
+            conn.commit()
+
+    def get_files(self, conversation_id: str) -> list[dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    file_id,
+                    original_name,
+                    storage_path,
+                    file_type,
+                    metadata
+                FROM conversation_files
+                WHERE conversation_id = ?
+                ORDER BY id ASC
+                """,
+                (conversation_id,),
+            ).fetchall()
+
+        return [
+            {
+                "file_id": file_id,
+                "original_name": original_name,
+                "storage_path": storage_path,
+                "file_type": file_type,
+                "metadata": json.loads(metadata or "{}"),
+            }
+            for (
+                file_id,
+                original_name,
+                storage_path,
+                file_type,
+                metadata,
+            ) in rows
+        ]
 
     def create_conversation(self) -> str:
         conversation_id = f"conv_{uuid.uuid4().hex[:12]}"

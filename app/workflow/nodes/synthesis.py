@@ -477,41 +477,46 @@ class SynthesisNode:
 
         source_bound_facts = []
 
-        for item in grounded_evidence:
-            evidence_id = item.get("evidence_id")
-            source_filename = str(
-                item.get("source_filename", "")
-            ).lower()
-            content = str(item.get("content", ""))
+        if (
+            "budget" in user_query.lower()
+            or "duration" in user_query.lower()
+        ):
+            for item in grounded_evidence:
+                evidence_id = item.get("evidence_id")
+                source_filename = str(
+                    item.get("source_filename", "")
+                ).lower()
+                content = str(item.get("content", ""))
 
-            if not evidence_id or not content:
-                continue
+                if not evidence_id or not content:
+                    continue
 
-            if source_filename.endswith(".pdf"):
-                source_bound_facts.append(
-                    (
-                        f"PDF SOURCE-BOUND FACTS: "
-                        f"budget/duration MUST be taken from evidence "
-                        f"{evidence_id}. "
-                        f"Evidence content: {content}"
+                if source_filename.endswith(".pdf"):
+                    source_bound_facts.append(
+                        (
+                            f"PDF SOURCE-BOUND FACTS: "
+                            f"budget/duration MUST be taken from evidence "
+                            f"{evidence_id}. "
+                            f"Evidence content: {content}"
+                        )
                     )
-                )
 
-            elif source_filename.endswith(
-                (".png", ".jpg", ".jpeg", ".bmp", ".webp")
-            ):
-                source_bound_facts.append(
-                    (
-                        f"IMAGE SOURCE-BOUND FACTS: "
-                        f"budget/duration MUST be taken from evidence "
-                        f"{evidence_id}. "
-                        f"Evidence content: {content}"
+                elif source_filename.endswith(
+                    (".png", ".jpg", ".jpeg", ".bmp", ".webp")
+                ):
+                    source_bound_facts.append(
+                        (
+                            f"IMAGE SOURCE-BOUND FACTS: "
+                            f"budget/duration MUST be taken from evidence "
+                            f"{evidence_id}. "
+                            f"Evidence content: {content}"
+                        )
                     )
-                )
 
         source_bound_fact_context = "\n".join(
             source_bound_facts
         )
+
         prompt = f"""
 You are SOVARA's final answer generation stage.
 
@@ -734,3 +739,4 @@ Return ONLY the final answer.
             ],
             "confidence": 0.85,
         }
+

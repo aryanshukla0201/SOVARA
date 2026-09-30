@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 
@@ -161,12 +161,12 @@ class WorkflowGraph:
         self,
         state: WorkflowState,
     ) -> str:
-        field = DocumentFactExtractor.detect_field(
+        fields = DocumentFactExtractor.detect_fields(
             state.user_query
         )
 
         if (
-            field
+            fields
             and state.retrieved_evidence
             and any(
                 isinstance(item, dict)
@@ -489,6 +489,7 @@ class WorkflowGraph:
         self,
         state: WorkflowState,
     ) -> WorkflowState:
+        evidence = state.retrieved_evidence
         result = DocumentFactExtractor.extract(
             query=state.user_query,
             evidence=evidence,
@@ -592,7 +593,7 @@ class WorkflowGraph:
         if (
             state.current_route == "reasoning"
             and state.retrieved_evidence
-            and DocumentFactExtractor.detect_field(state.user_query) is not None
+            and DocumentFactExtractor.detect_fields(state.user_query)
         ):
             state.current_route = "document_fact"
 
@@ -684,16 +685,17 @@ class WorkflowGraph:
 
     def _final_answer(self, state: WorkflowState) -> WorkflowState:
         # Case 0: Deterministic document fact extraction
-        field = DocumentFactExtractor.detect_field(state.user_query)
+        fields = DocumentFactExtractor.detect_fields(state.user_query)
 
         if (
-            field
+            fields
             and state.retrieved_evidence
             and any(
                 isinstance(item, dict) and item.get("content")
                 for item in state.retrieved_evidence
             )
         ):
+            evidence = state.retrieved_evidence
             result = DocumentFactExtractor.extract(
                 query=state.user_query,
                 evidence=evidence,

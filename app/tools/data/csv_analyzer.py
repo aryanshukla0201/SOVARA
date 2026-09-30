@@ -58,38 +58,39 @@ class CSVAnalyzer:
         # Metric selection
         # --------------------------------------------------
 
-        metric = numeric_columns[0]
-
-        for column in numeric_columns:
+        requested_metrics = [
+            column
+            for column in numeric_columns
             if re.search(
                 rf"\b{re.escape(str(column).lower())}\b",
                 query,
-            ):
-                metric = column
-                break
-        else:
-            if re.search(r"\b(sum|total)\b", query):
-                measure_keywords = (
-                    "amount",
-                    "value",
-                    "price",
-                    "cost",
-                    "total",
-                    "revenue",
-                    "sales",
-                    "quantity",
-                    "count",
-                )
+            )
+        ]
 
-                for column in numeric_columns:
-                    column_name = str(column).lower()
+        metric = requested_metrics[0] if requested_metrics else numeric_columns[0]
 
-                    if any(
-                        keyword in column_name
-                        for keyword in measure_keywords
-                    ):
-                        metric = column
-                        break
+        if not requested_metrics and re.search(r"\b(sum|total)\b", query):
+            measure_keywords = (
+                "amount",
+                "value",
+                "price",
+                "cost",
+                "total",
+                "revenue",
+                "sales",
+                "quantity",
+                "count",
+            )
+
+            for column in numeric_columns:
+                column_name = str(column).lower()
+
+                if any(
+                    keyword in column_name
+                    for keyword in measure_keywords
+                ):
+                    metric = column
+                    break
 
         values = (
             pd.to_numeric(df[metric], errors="coerce")
@@ -153,17 +154,31 @@ class CSVAnalyzer:
         # --------------------------------------------------
 
         if wants_sum:
-            analyses.append(
-                {
-                    "analysis_type": "sum",
-                    "metric": metric,
-                    "sum": round(
-                        float(values.sum()),
-                        2,
-                    ),
-                    "valid_values": len(values),
-                }
-            )
+            sum_metrics = requested_metrics or [metric]
+
+            for sum_metric in sum_metrics:
+                sum_values = (
+                    pd.to_numeric(
+                        df[sum_metric],
+                        errors="coerce",
+                    )
+                    .dropna()
+                )
+
+                if sum_values.empty:
+                    continue
+
+                analyses.append(
+                    {
+                        "analysis_type": "sum",
+                        "metric": sum_metric,
+                        "sum": round(
+                            float(sum_values.sum()),
+                            2,
+                        ),
+                        "valid_values": len(sum_values),
+                    }
+                )
 
         # --------------------------------------------------
         # Minimum record

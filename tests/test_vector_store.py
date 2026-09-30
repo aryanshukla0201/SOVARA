@@ -7,6 +7,8 @@ from app.services.vector_store import VectorStore
 
 @pytest.fixture
 def vector_store(tmp_path: Path):
+    if VectorStore._client is not None:
+        VectorStore._client.close()
     VectorStore._client = None
 
     store = VectorStore(path=str(tmp_path / "qdrant"))
@@ -175,3 +177,4 @@ def test_search_applies_source_file_id_and_metadata_filters():
     assert conditions[0].match.value == "file_123"
     assert conditions[1].key == "page_number"
     assert conditions[1].match.value == 1
+

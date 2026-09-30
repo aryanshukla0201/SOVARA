@@ -251,6 +251,37 @@ def run_multimodal_analysis(
         ) from exc
 
     # ---------------------------------------------------------
+    # RESTORE CONVERSATION FILES FOR FOLLOW-UP TURNS
+    # ---------------------------------------------------------
+
+    if not state.uploaded_files:
+        from app.state.workflow_state import UploadedFileRecord
+
+        state.uploaded_files = [
+            UploadedFileRecord(**file_record)
+            for file_record in conversation_service.get_files(
+                conversation_id
+            )
+            if Path(file_record["storage_path"]).exists()
+        ]
+
+    # Persist files introduced by this turn.
+    for file_record in state.uploaded_files:
+        if saved_paths and file_record.storage_path:
+            existing_files = conversation_service.get_files(
+                conversation_id
+            )
+
+            if not any(
+                item["file_id"] == file_record.file_id
+                for item in existing_files
+            ):
+                conversation_service.add_file(
+                    conversation_id,
+                    file_record,
+                )
+
+    # ---------------------------------------------------------
     # RUN ACTUAL SOVARA LANGGRAPH WORKFLOW
     # ---------------------------------------------------------
 
