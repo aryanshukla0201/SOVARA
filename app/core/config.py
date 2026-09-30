@@ -42,6 +42,13 @@ class Settings(BaseModel):
         )
     )
 
+    qdrant_path: str = Field(
+        default_factory=lambda: os.getenv(
+            "QDRANT_PATH",
+            "data/qdrant",
+        )
+    )
+
     max_repair_attempts: int = Field(
         default_factory=lambda: int(
             os.getenv("MAX_REPAIR_ATTEMPTS", "3")

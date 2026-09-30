@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from typing import Any
-
+from app.core.config import get_settings
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
@@ -20,10 +20,12 @@ class VectorStore:
     COLLECTION_NAME = "sovara_evidence"
     VECTOR_SIZE = 384
 
-    def __init__(self, path: str = "data/qdrant"):
+    def __init__(self, path: str | None = None):
+        if path is None:
+            path = get_settings().qdrant_path
+
         if VectorStore._client is None:
             VectorStore._client = QdrantClient(path=path)
-
         self.client = VectorStore._client
         self._ensure_collection()
 
